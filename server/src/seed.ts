@@ -5,8 +5,6 @@ async function seed() {
 
   const calidades = [
     { nombre: 'Primera calidad', requiere_limpieza: false, precio_venta_jaba: 120 },
-    { nombre: 'Segunda calidad', requiere_limpieza: false, precio_venta_jaba: 150 },
-    { nombre: 'Tercera calidad', requiere_limpieza: false, precio_venta_jaba: 90 },
     { nombre: 'Cuarta calidad', requiere_limpieza: true, precio_venta_jaba: 70 },
   ];
 
