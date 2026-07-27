@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Trash2 } from "lucide-react";
 import AppLayout from "@/app/layout-wrapper";
 
 export default function ComprasPage() {
@@ -42,7 +43,21 @@ export default function ComprasPage() {
     fetchCompras();
   }, [fetchCalidades, fetchCompras]);
 
+  const [deleting, setDeleting] = useState<number | null>(null);
   const costoTotal = Number(pesoTotal) * Number(precioKg) || 0;
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("¿Eliminar esta compra? También se eliminará su registro de limpieza asociado.")) return;
+    setDeleting(id);
+    try {
+      await api.deleteCompra(id);
+      fetchCompras();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,6 +172,7 @@ export default function ComprasPage() {
                   <TableHead>Precio/kg</TableHead>
                   <TableHead>Costo Total</TableHead>
                   <TableHead>Notas</TableHead>
+                  <TableHead className="w-16"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -169,6 +185,17 @@ export default function ComprasPage() {
                     <TableCell>{formatCurrency(Number(c.precio_por_kg))}</TableCell>
                     <TableCell>{formatCurrency(Number(c.costo_total))}</TableCell>
                     <TableCell>{c.notas || "-"}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(c.id)}
+                        disabled={deleting === c.id}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

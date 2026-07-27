@@ -45,6 +45,9 @@ export const api = {
   getCompras: (params?: string) =>
     fetchAPI(`/api/compras${params ? `?${params}` : ""}`),
 
+  deleteCompra: (id: number) =>
+    fetchAPI(`/api/compras/${id}`, { method: "DELETE" }),
+
   createLimpieza: (data: any) =>
     fetchAPI("/api/limpiezas", {
       method: "POST",

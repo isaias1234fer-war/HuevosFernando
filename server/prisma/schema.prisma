@@ -32,7 +32,7 @@ model Compra {
 model Limpieza {
   id                  Int      @id @default(autoincrement())
   compra_id           Int      @unique
-  compra              Compra   @relation(fields: [compra_id], references: [id])
+  compra              Compra   @relation(fields: [compra_id], references: [id], onDelete: Cascade)
   fecha               DateTime @default(now())
   huevos_rotos        Int
   jabas_rotas_equivalente Decimal @db.Decimal(10, 2)

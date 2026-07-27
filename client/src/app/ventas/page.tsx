@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Pencil } from "lucide-react";
 import AppLayout from "@/app/layout-wrapper";
 
 export default function VentasPage() {
@@ -48,7 +49,17 @@ export default function VentasPage() {
     }
   }, [calidadId, calidades]);
 
+  const calidadSeleccionada = calidades.find((c) => String(c.id) === calidadId);
   const total = Number(cantidadJabas) * Number(precioPorJaba) || 0;
+
+  const handleUpdatePrecio = async () => {
+    if (!calidadId) return;
+    const nuevoPrecio = prompt("Nuevo precio por jaba (S/):", precioPorJaba);
+    if (!nuevoPrecio || isNaN(Number(nuevoPrecio))) return;
+    await api.updateCalidad(parseInt(calidadId), { precio_venta_jaba: nuevoPrecio });
+    await fetchCalidades();
+    setPrecioPorJaba(nuevoPrecio);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,15 +110,35 @@ export default function VentasPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Precio por jaba (S/)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={precioPorJaba}
-                  onChange={(e) => setPrecioPorJaba(e.target.value)}
-                  required
-                  min="0"
-                />
+                <Label>
+                  Precio por jaba (S/)
+                  {calidadSeleccionada && (
+                    <span className="text-xs text-muted-foreground ml-2">
+                      (establecido: S/ {Number(calidadSeleccionada.precio_venta_jaba).toFixed(2)})
+                    </span>
+                  )}
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={precioPorJaba}
+                    onChange={(e) => setPrecioPorJaba(e.target.value)}
+                    required
+                    min="0"
+                  />
+                  {calidadId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleUpdatePrecio}
+                      title="Actualizar precio establecido"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Notas</Label>

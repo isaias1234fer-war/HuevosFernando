@@ -48,3 +48,15 @@ comprasRouter.get('/', async (req: AuthRequest, res: Response) => {
 
   res.json(compras);
 });
+
+comprasRouter.delete('/:id', async (req: AuthRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+
+  const compra = await prisma.compra.findUnique({ where: { id } });
+  if (!compra) {
+    return res.status(404).json({ error: 'Compra no encontrada' });
+  }
+
+  await prisma.compra.delete({ where: { id } });
+  res.json({ message: 'Compra eliminada' });
+});
