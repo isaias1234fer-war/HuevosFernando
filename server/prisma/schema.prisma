@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Calidad {
+  id               Int       @id @default(autoincrement())
+  nombre           String    @unique
+  requiere_limpieza Boolean  @default(false)
+  precio_venta_jaba Decimal   @default(0) @db.Decimal(10, 2)
+  compras          Compra[]
+  ventas           Venta[]
+}
+
+model Compra {
+  id              Int       @id @default(autoincrement())
+  fecha           DateTime  @default(now())
+  calidad_id      Int
+  calidad         Calidad   @relation(fields: [calidad_id], references: [id])
+  cantidad_jabas  Int
+  peso_total_kg   Decimal   @db.Decimal(10, 2)
+  precio_por_kg   Decimal   @db.Decimal(10, 2)
+  costo_total     Decimal   @db.Decimal(10, 2)
+  notas           String?
+  limpieza        Limpieza?
+}
+
+model Limpieza {
+  id                  Int      @id @default(autoincrement())
+  compra_id           Int      @unique
+  compra              Compra   @relation(fields: [compra_id], references: [id])
+  fecha               DateTime @default(now())
+  huevos_rotos        Int
+  jabas_rotas_equivalente Decimal @db.Decimal(10, 2)
+  observaciones       String?
+}
+
+model Venta {
+  id             Int       @id @default(autoincrement())
+  fecha          DateTime  @default(now())
+  calidad_id     Int
+  calidad        Calidad   @relation(fields: [calidad_id], references: [id])
+  cantidad_jabas Int
+  precio_por_jaba Decimal  @db.Decimal(10, 2)
+  total          Decimal   @db.Decimal(10, 2)
+  notas          String?
+}
+
+model Configuracion {
+  id             Int   @id @default(autoincrement())
+  huevos_por_jaba Int  @default(30)
+}
