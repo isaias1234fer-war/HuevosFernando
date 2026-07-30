@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import AppLayout from "@/app/layout-wrapper";
-import { DollarSign, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, AlertTriangle, HandCoins, Users } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -56,6 +56,20 @@ export default function DashboardPage() {
       icon: TrendingUp,
       color: "text-green-500",
       bg: "bg-green-50",
+    },
+    {
+      title: "Ingresos Cobrados",
+      value: resumen?.ingresos_cobrados ?? 0,
+      icon: HandCoins,
+      color: "text-emerald-500",
+      bg: "bg-emerald-50",
+    },
+    {
+      title: "Cuentas por Cobrar",
+      value: resumen?.cuentas_por_cobrar ?? 0,
+      icon: Users,
+      color: "text-orange-500",
+      bg: "bg-orange-50",
     },
     {
       title: "Ganancia Neta",

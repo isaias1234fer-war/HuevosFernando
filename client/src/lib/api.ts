@@ -66,8 +66,17 @@ export const api = {
   getVentas: (params?: string) =>
     fetchAPI(`/api/ventas${params ? `?${params}` : ""}`),
 
+  getVentaPagos: (id: number) =>
+    fetchAPI(`/api/ventas/${id}/pagos`),
+
   deleteVenta: (id: number) =>
     fetchAPI(`/api/ventas/${id}`, { method: "DELETE" }),
+
+  createPago: (data: any) =>
+    fetchAPI("/api/pagos", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   getInventario: () => fetchAPI("/api/inventario"),
 

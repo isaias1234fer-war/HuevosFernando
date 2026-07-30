@@ -14,6 +14,7 @@ import {
   BarChart3,
   LogOut,
   Egg,
+  CreditCard,
 } from "lucide-react";
 
 const menuItems = [
@@ -21,6 +22,7 @@ const menuItems = [
   { href: "/compras", label: "Compras", icon: ShoppingCart },
   { href: "/limpieza", label: "Limpieza", icon: Sparkles },
   { href: "/ventas", label: "Ventas", icon: TrendingUp },
+  { href: "/cuentas-cobrar", label: "Ctas x Cobrar", icon: CreditCard },
   { href: "/inventario", label: "Inventario", icon: Package },
   { href: "/reportes", label: "Reportes", icon: BarChart3 },
 ];

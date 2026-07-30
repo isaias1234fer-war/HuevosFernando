@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Plus } from "lucide-react";
 import AppLayout from "@/app/layout-wrapper";
 
 export default function VentasPage() {
@@ -19,9 +19,17 @@ export default function VentasPage() {
   const [cantidadJabas, setCantidadJabas] = useState("");
   const [precioPorJaba, setPrecioPorJaba] = useState("");
   const [notas, setNotas] = useState("");
+  const [tipoPago, setTipoPago] = useState("contado");
+  const [cliente, setCliente] = useState("");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [filtroCalidad, setFiltroCalidad] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("");
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const [abonoVentaId, setAbonoVentaId] = useState<number | null>(null);
+  const [abonoMonto, setAbonoMonto] = useState("");
+  const [abonoFecha, setAbonoFecha] = useState("");
+  const [abonoNotas, setAbonoNotas] = useState("");
 
   const fetchCalidades = useCallback(async () => {
     const data = await api.getCalidades();
@@ -33,9 +41,10 @@ export default function VentasPage() {
     if (desde) params.set("desde", desde);
     if (hasta) params.set("hasta", hasta);
     if (filtroCalidad) params.set("calidad_id", filtroCalidad);
+    if (filtroEstado) params.set("estado_pago", filtroEstado);
     const data = await api.getVentas(params.toString());
     setVentas(data);
-  }, [desde, hasta, filtroCalidad]);
+  }, [desde, hasta, filtroCalidad, filtroEstado]);
 
   useEffect(() => {
     fetchCalidades();
@@ -49,7 +58,6 @@ export default function VentasPage() {
     }
   }, [calidadId, calidades]);
 
-  const [deleting, setDeleting] = useState<number | null>(null);
   const calidadSeleccionada = calidades.find((c) => String(c.id) === calidadId);
   const total = Number(cantidadJabas) * Number(precioPorJaba) || 0;
 
@@ -60,6 +68,23 @@ export default function VentasPage() {
     await api.updateCalidad(parseInt(calidadId), { precio_venta_jaba: nuevoPrecio });
     await fetchCalidades();
     setPrecioPorJaba(nuevoPrecio);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await api.createVenta({
+      calidad_id: parseInt(calidadId),
+      cantidad_jabas: parseInt(cantidadJabas),
+      precio_por_jaba: precioPorJaba,
+      notas,
+      tipo_pago: tipoPago,
+      cliente: tipoPago === "fiado" ? cliente : undefined,
+    });
+    setCantidadJabas("");
+    setPrecioPorJaba("");
+    setNotas("");
+    setCliente("");
+    fetchVentas();
   };
 
   const handleDelete = async (id: number) => {
@@ -75,18 +100,33 @@ export default function VentasPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAbono = async (e: React.FormEvent) => {
     e.preventDefault();
-    await api.createVenta({
-      calidad_id: parseInt(calidadId),
-      cantidad_jabas: parseInt(cantidadJabas),
-      precio_por_jaba: precioPorJaba,
-      notas,
-    });
-    setCantidadJabas("");
-    setPrecioPorJaba("");
-    setNotas("");
-    fetchVentas();
+    if (!abonoVentaId) return;
+    try {
+      await api.createPago({
+        venta_id: abonoVentaId,
+        monto: abonoMonto,
+        fecha: abonoFecha || undefined,
+        notas: abonoNotas || undefined,
+      });
+      setAbonoVentaId(null);
+      setAbonoMonto("");
+      setAbonoFecha("");
+      setAbonoNotas("");
+      fetchVentas();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const badgeClass = (estado: string) => {
+    switch (estado) {
+      case "pagado": return "bg-green-100 text-green-700";
+      case "parcial": return "bg-yellow-100 text-yellow-700";
+      case "pendiente": return "bg-red-100 text-red-700";
+      default: return "bg-gray-100 text-gray-700";
+    }
   };
 
   return (
@@ -104,7 +144,7 @@ export default function VentasPage() {
                 <Label>Calidad</Label>
                 <Select
                   value={calidadId}
-                  onChange={(e) => { setCalidadId(e.target.value); }}
+                  onChange={(e) => setCalidadId(e.target.value)}
                   options={calidades.map((c) => ({
                     value: String(c.id),
                     label: `${c.nombre} - S/ ${c.precio_venta_jaba}/jaba`,
@@ -116,11 +156,9 @@ export default function VentasPage() {
               <div className="space-y-2">
                 <Label>Cantidad (jabas)</Label>
                 <Input
-                  type="number"
-                  value={cantidadJabas}
+                  type="number" value={cantidadJabas}
                   onChange={(e) => setCantidadJabas(e.target.value)}
-                  required
-                  min="1"
+                  required min="1"
                 />
               </div>
               <div className="space-y-2">
@@ -128,32 +166,40 @@ export default function VentasPage() {
                   Precio por jaba (S/)
                   {calidadSeleccionada && (
                     <span className="text-xs text-muted-foreground ml-2">
-                      (establecido: S/ {Number(calidadSeleccionada.precio_venta_jaba).toFixed(2)})
+                      (establecido: S/{Number(calidadSeleccionada.precio_venta_jaba).toFixed(2)})
                     </span>
                   )}
                 </Label>
                 <div className="flex gap-2">
                   <Input
-                    type="number"
-                    step="0.01"
-                    value={precioPorJaba}
+                    type="number" step="0.01" value={precioPorJaba}
                     onChange={(e) => setPrecioPorJaba(e.target.value)}
-                    required
-                    min="0"
+                    required min="0"
                   />
                   {calidadId && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={handleUpdatePrecio}
-                      title="Actualizar precio establecido"
-                    >
+                    <Button type="button" variant="outline" size="icon" onClick={handleUpdatePrecio} title="Actualizar precio establecido">
                       <Pencil className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label>Tipo de pago</Label>
+                <Select
+                  value={tipoPago}
+                  onChange={(e) => setTipoPago(e.target.value)}
+                  options={[
+                    { value: "contado", label: "Al contado" },
+                    { value: "fiado", label: "Al fiado" },
+                  ]}
+                />
+              </div>
+              {tipoPago === "fiado" && (
+                <div className="space-y-2">
+                  <Label>Cliente</Label>
+                  <Input value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Nombre del cliente" />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Notas</Label>
                 <Input value={notas} onChange={(e) => setNotas(e.target.value)} />
@@ -173,15 +219,26 @@ export default function VentasPage() {
             <CardTitle>Historial de Ventas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4 mb-4">
-              <Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="w-40" />
-              <Input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="w-40" />
+            <div className="flex items-center gap-4 mb-4 flex-wrap">
+              <Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="w-36" />
+              <Input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="w-36" />
               <Select
                 value={filtroCalidad}
                 onChange={(e) => setFiltroCalidad(e.target.value)}
                 options={calidades.map((c) => ({ value: String(c.id), label: c.nombre }))}
                 placeholder="Todas las calidades"
-                className="w-48"
+                className="w-44"
+              />
+              <Select
+                value={filtroEstado}
+                onChange={(e) => setFiltroEstado(e.target.value)}
+                options={[
+                  { value: "pagado", label: "Pagado" },
+                  { value: "parcial", label: "Parcial" },
+                  { value: "pendiente", label: "Pendiente" },
+                ]}
+                placeholder="Todos los estados"
+                className="w-36"
               />
               <Button onClick={fetchVentas}>Filtrar</Button>
             </div>
@@ -193,8 +250,12 @@ export default function VentasPage() {
                   <TableHead>Jabas</TableHead>
                   <TableHead>Precio/jaba</TableHead>
                   <TableHead>Total</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Saldo</TableHead>
                   <TableHead>Notas</TableHead>
-                  <TableHead className="w-16"></TableHead>
+                  <TableHead className="w-24"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -205,17 +266,41 @@ export default function VentasPage() {
                     <TableCell>{v.cantidad_jabas}</TableCell>
                     <TableCell>{formatCurrency(Number(v.precio_por_jaba))}</TableCell>
                     <TableCell>{formatCurrency(Number(v.total))}</TableCell>
+                    <TableCell>
+                      <span className={v.tipo_pago === "fiado" ? "text-orange-600 font-medium" : "text-green-600"}>{v.tipo_pago}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${badgeClass(v.estado_pago)}`}>{v.estado_pago}</span>
+                    </TableCell>
+                    <TableCell>{v.cliente || "-"}</TableCell>
+                    <TableCell className="font-medium">{v.tipo_pago === "fiado" ? formatCurrency(Number(v.saldo_pendiente)) : "-"}</TableCell>
                     <TableCell>{v.notas || "-"}</TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(v.id)}
-                        disabled={deleting === v.id}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        {v.tipo_pago === "fiado" && Number(v.saldo_pendiente) > 0 && (
+                          <Button
+                            variant="ghost" size="sm"
+                            onClick={() => {
+                              setAbonoVentaId(v.id);
+                              setAbonoMonto(String(Number(v.saldo_pendiente)));
+                              setAbonoFecha("");
+                              setAbonoNotas("");
+                            }}
+                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                            title="Registrar abono"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost" size="sm"
+                          onClick={() => handleDelete(v.id)}
+                          disabled={deleting === v.id}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -223,6 +308,36 @@ export default function VentasPage() {
             </Table>
           </CardContent>
         </Card>
+
+        {abonoVentaId && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setAbonoVentaId(null)}>
+            <Card className="w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+              <CardHeader>
+                <CardTitle>Registrar Abono</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleAbono} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Monto (S/)</Label>
+                    <Input type="number" step="0.01" value={abonoMonto} onChange={(e) => setAbonoMonto(e.target.value)} required min="0.01" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Fecha</Label>
+                    <Input type="date" value={abonoFecha} onChange={(e) => setAbonoFecha(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Notas</Label>
+                    <Input value={abonoNotas} onChange={(e) => setAbonoNotas(e.target.value)} />
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button type="button" variant="outline" onClick={() => setAbonoVentaId(null)}>Cancelar</Button>
+                    <Button type="submit">Registrar</Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </AppLayout>
   );

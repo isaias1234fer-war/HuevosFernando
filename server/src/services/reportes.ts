@@ -50,9 +50,23 @@ export async function getResumen(desde?: string, hasta?: string) {
     g.ganancia = Number((g.ingresos - g.inversion).toFixed(2));
   }
 
+  const pagosAgg = await prisma.pago.aggregate({
+    where: { venta: where },
+    _sum: { monto: true },
+  });
+  const ingresosCobrados = Number(pagosAgg._sum.monto || 0);
+
+  const ventasFiadoNoPagadas = await prisma.venta.aggregate({
+    where: { ...where, tipo_pago: 'fiado', estado_pago: { not: 'pagado' } },
+    _sum: { saldo_pendiente: true },
+  });
+  const cuentasPorCobrar = Number(ventasFiadoNoPagadas._sum.saldo_pendiente || 0);
+
   return {
     inversion_total: Number(inversionTotal.toFixed(2)),
     ingresos_totales: Number(ingresosTotales.toFixed(2)),
+    ingresos_cobrados: Number(ingresosCobrados.toFixed(2)),
+    cuentas_por_cobrar: Number(cuentasPorCobrar.toFixed(2)),
     ganancia_neta: Number(gananciaNeta.toFixed(2)),
     valor_merma: Number(valorMerma.toFixed(2)),
     ganancia_por_calidad: gananciaPorCalidad,

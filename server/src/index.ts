@@ -6,6 +6,7 @@ import { calidadesRouter } from './routes/calidades';
 import { comprasRouter } from './routes/compras';
 import { limpiezasRouter } from './routes/limpiezas';
 import { ventasRouter } from './routes/ventas';
+import { pagosRouter } from './routes/pagos';
 import { inventarioRouter } from './routes/inventario';
 import { reportesRouter } from './routes/reportes';
 import { authMiddleware } from './middleware/auth';
@@ -25,6 +26,7 @@ app.use('/api/calidades', authMiddleware, calidadesRouter);
 app.use('/api/compras', authMiddleware, comprasRouter);
 app.use('/api/limpiezas', authMiddleware, limpiezasRouter);
 app.use('/api/ventas', authMiddleware, ventasRouter);
+app.use('/api/pagos', authMiddleware, pagosRouter);
 app.use('/api/inventario', authMiddleware, inventarioRouter);
 app.use('/api/reportes', authMiddleware, reportesRouter);
 
