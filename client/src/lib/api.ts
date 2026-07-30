@@ -66,6 +66,9 @@ export const api = {
   getVentas: (params?: string) =>
     fetchAPI(`/api/ventas${params ? `?${params}` : ""}`),
 
+  deleteVenta: (id: number) =>
+    fetchAPI(`/api/ventas/${id}`, { method: "DELETE" }),
+
   getInventario: () => fetchAPI("/api/inventario"),
 
   getResumen: (params?: string) =>

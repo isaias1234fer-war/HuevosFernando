@@ -47,3 +47,15 @@ ventasRouter.get('/', async (req: AuthRequest, res: Response) => {
 
   res.json(ventas);
 });
+
+ventasRouter.delete('/:id', async (req: AuthRequest, res: Response) => {
+  const id = parseInt(req.params.id);
+
+  const venta = await prisma.venta.findUnique({ where: { id } });
+  if (!venta) {
+    return res.status(404).json({ error: 'Venta no encontrada' });
+  }
+
+  await prisma.venta.delete({ where: { id } });
+  res.json({ message: 'Venta eliminada' });
+});

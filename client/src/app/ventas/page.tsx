@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import AppLayout from "@/app/layout-wrapper";
 
 export default function VentasPage() {
@@ -49,6 +49,7 @@ export default function VentasPage() {
     }
   }, [calidadId, calidades]);
 
+  const [deleting, setDeleting] = useState<number | null>(null);
   const calidadSeleccionada = calidades.find((c) => String(c.id) === calidadId);
   const total = Number(cantidadJabas) * Number(precioPorJaba) || 0;
 
@@ -59,6 +60,19 @@ export default function VentasPage() {
     await api.updateCalidad(parseInt(calidadId), { precio_venta_jaba: nuevoPrecio });
     await fetchCalidades();
     setPrecioPorJaba(nuevoPrecio);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("¿Eliminar esta venta?")) return;
+    setDeleting(id);
+    try {
+      await api.deleteVenta(id);
+      fetchVentas();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setDeleting(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -180,6 +194,7 @@ export default function VentasPage() {
                   <TableHead>Precio/jaba</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Notas</TableHead>
+                  <TableHead className="w-16"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -191,6 +206,17 @@ export default function VentasPage() {
                     <TableCell>{formatCurrency(Number(v.precio_por_jaba))}</TableCell>
                     <TableCell>{formatCurrency(Number(v.total))}</TableCell>
                     <TableCell>{v.notas || "-"}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(v.id)}
+                        disabled={deleting === v.id}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
