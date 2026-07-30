@@ -11,7 +11,7 @@ calidadesRouter.get('/', async (_req: AuthRequest, res: Response) => {
 
 calidadesRouter.patch('/:id', async (req: AuthRequest, res: Response) => {
   const id = parseInt(req.params.id);
-  const { nombre, requiere_limpieza, precio_venta_jaba } = req.body;
+  const { nombre, requiere_limpieza, precio_venta_jaba, dias_conservacion_min, dias_conservacion_max } = req.body;
 
   const updated = await prisma.calidad.update({
     where: { id },
@@ -19,6 +19,8 @@ calidadesRouter.patch('/:id', async (req: AuthRequest, res: Response) => {
       ...(nombre !== undefined && { nombre }),
       ...(requiere_limpieza !== undefined && { requiere_limpieza }),
       ...(precio_venta_jaba !== undefined && { precio_venta_jaba }),
+      ...(dias_conservacion_min !== undefined && { dias_conservacion_min }),
+      ...(dias_conservacion_max !== undefined && { dias_conservacion_max }),
     },
   });
 

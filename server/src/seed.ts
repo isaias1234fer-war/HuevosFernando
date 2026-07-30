@@ -4,8 +4,8 @@ async function seed() {
   console.log('Seeding database...');
 
   const calidades = [
-    { nombre: 'Primera calidad', requiere_limpieza: false, precio_venta_jaba: 120 },
-    { nombre: 'Cuarta calidad', requiere_limpieza: true, precio_venta_jaba: 70 },
+    { nombre: 'Primera calidad', requiere_limpieza: false, precio_venta_jaba: 120, dias_conservacion_min: 15, dias_conservacion_max: 21 },
+    { nombre: 'Cuarta calidad', requiere_limpieza: true, precio_venta_jaba: 70, dias_conservacion_min: 7, dias_conservacion_max: 14 },
   ];
 
   for (const c of calidades) {

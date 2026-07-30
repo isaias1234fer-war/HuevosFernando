@@ -30,6 +30,8 @@ export default function VentasPage() {
   const [abonoMonto, setAbonoMonto] = useState("");
   const [abonoFecha, setAbonoFecha] = useState("");
   const [abonoNotas, setAbonoNotas] = useState("");
+  const [lotes, setLotes] = useState<any[]>([]);
+  const [compraId, setCompraId] = useState("");
 
   const fetchCalidades = useCallback(async () => {
     const data = await api.getCalidades();
@@ -58,16 +60,42 @@ export default function VentasPage() {
     }
   }, [calidadId, calidades]);
 
+  useEffect(() => {
+    if (!calidadId) { setLotes([]); setCompraId(""); return; }
+    api.getLotes().then((data) => {
+      const filtrados = data.filter((l: any) => l.calidad_id === parseInt(calidadId) && l.estado !== "vencido" && l.jabas_restantes > 0);
+      filtrados.sort((a: any, b: any) => new Date(a.fecha_compra).getTime() - new Date(b.fecha_compra).getTime());
+      setLotes(filtrados);
+      if (filtrados.length > 0) setCompraId(String(filtrados[0].compra_id));
+    }).catch(() => {});
+  }, [calidadId]);
+
   const calidadSeleccionada = calidades.find((c) => String(c.id) === calidadId);
   const total = Number(cantidadJabas) * Number(precioPorJaba) || 0;
 
-  const handleUpdatePrecio = async () => {
+  const [editCalidadOpen, setEditCalidadOpen] = useState(false);
+  const [editPrecio, setEditPrecio] = useState("");
+  const [editConsMin, setEditConsMin] = useState("");
+  const [editConsMax, setEditConsMax] = useState("");
+
+  const handleOpenEditCalidad = () => {
+    if (!calidadSeleccionada) return;
+    setEditPrecio(String(calidadSeleccionada.precio_venta_jaba));
+    setEditConsMin(calidadSeleccionada.dias_conservacion_min != null ? String(calidadSeleccionada.dias_conservacion_min) : "");
+    setEditConsMax(calidadSeleccionada.dias_conservacion_max != null ? String(calidadSeleccionada.dias_conservacion_max) : "");
+    setEditCalidadOpen(true);
+  };
+
+  const handleSaveEditCalidad = async () => {
     if (!calidadId) return;
-    const nuevoPrecio = prompt("Nuevo precio por jaba (S/):", precioPorJaba);
-    if (!nuevoPrecio || isNaN(Number(nuevoPrecio))) return;
-    await api.updateCalidad(parseInt(calidadId), { precio_venta_jaba: nuevoPrecio });
+    await api.updateCalidad(parseInt(calidadId), {
+      precio_venta_jaba: editPrecio,
+      dias_conservacion_min: editConsMin ? parseInt(editConsMin) : null,
+      dias_conservacion_max: editConsMax ? parseInt(editConsMax) : null,
+    });
     await fetchCalidades();
-    setPrecioPorJaba(nuevoPrecio);
+    setPrecioPorJaba(editPrecio);
+    setEditCalidadOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,11 +107,13 @@ export default function VentasPage() {
       notas,
       tipo_pago: tipoPago,
       cliente: tipoPago === "fiado" ? cliente : undefined,
+      compra_id: compraId || undefined,
     });
     setCantidadJabas("");
     setPrecioPorJaba("");
     setNotas("");
     setCliente("");
+    setCompraId("");
     fetchVentas();
   };
 
@@ -153,6 +183,20 @@ export default function VentasPage() {
                   required
                 />
               </div>
+              {lotes.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Lote (FIFO sugerido)</Label>
+                  <Select
+                    value={compraId}
+                    onChange={(e) => setCompraId(e.target.value)}
+                    options={lotes.map((l: any) => ({
+                      value: String(l.compra_id),
+                      label: `#${l.compra_id} - ${l.jabas_restantes} jabas disp. (${new Date(l.fecha_compra).toLocaleDateString()})`,
+                    }))}
+                    placeholder="Sin asignar lote"
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Cantidad (jabas)</Label>
                 <Input
@@ -177,7 +221,7 @@ export default function VentasPage() {
                     required min="0"
                   />
                   {calidadId && (
-                    <Button type="button" variant="outline" size="icon" onClick={handleUpdatePrecio} title="Actualizar precio establecido">
+                    <Button type="button" variant="outline" size="icon" onClick={handleOpenEditCalidad} title="Editar configuración de calidad">
                       <Pencil className="h-4 w-4" />
                     </Button>
                   )}
@@ -254,6 +298,7 @@ export default function VentasPage() {
                   <TableHead>Estado</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Saldo</TableHead>
+                  <TableHead>Lote</TableHead>
                   <TableHead>Notas</TableHead>
                   <TableHead className="w-24"></TableHead>
                 </TableRow>
@@ -274,6 +319,7 @@ export default function VentasPage() {
                     </TableCell>
                     <TableCell>{v.cliente || "-"}</TableCell>
                     <TableCell className="font-medium">{v.tipo_pago === "fiado" ? formatCurrency(Number(v.saldo_pendiente)) : "-"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{v.compra_id ? `#${v.compra_id}` : "-"}</TableCell>
                     <TableCell>{v.notas || "-"}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -309,8 +355,36 @@ export default function VentasPage() {
           </CardContent>
         </Card>
 
+        {editCalidadOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setEditCalidadOpen(false)}>
+            <Card className="w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+              <CardHeader>
+                <CardTitle>Configurar: {calidadSeleccionada?.nombre}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Precio venta por jaba (S/)</Label>
+                    <Input type="number" step="0.01" value={editPrecio} onChange={(e) => setEditPrecio(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Días conservación mínimos</Label>
+                    <Input type="number" value={editConsMin} onChange={(e) => setEditConsMin(e.target.value)} placeholder="Ej: 15" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Días conservación máximos</Label>
+                    <Input type="number" value={editConsMax} onChange={(e) => setEditConsMax(e.target.value)} placeholder="Ej: 21" />
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button type="button" variant="outline" onClick={() => setEditCalidadOpen(false)}>Cancelar</Button>
+                    <Button type="button" onClick={handleSaveEditCalidad}>Guardar</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
         {abonoVentaId && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setAbonoVentaId(null)}>
             <Card className="w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
               <CardHeader>
                 <CardTitle>Registrar Abono</CardTitle>

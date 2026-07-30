@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import AppLayout from "@/app/layout-wrapper";
-import { DollarSign, TrendingUp, TrendingDown, AlertTriangle, HandCoins, Users } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, AlertTriangle, HandCoins, Users, Clock, Ban } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -29,6 +29,7 @@ export default function DashboardPage() {
   const [resumen, setResumen] = useState<any>(null);
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
+  const [lotes, setLotes] = useState<any[]>([]);
 
   const fetchResumen = useCallback(async () => {
     const params = new URLSearchParams();
@@ -40,7 +41,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchResumen();
+    api.getLotes().then(setLotes).catch(() => {});
   }, [fetchResumen]);
+
+  const jabasPorVencer = lotes.filter((l) => l.estado === "por_vencer").reduce((s, l) => s + l.jabas_restantes, 0);
+  const jabasVencidas = lotes.filter((l) => l.estado === "vencido").reduce((s, l) => s + l.jabas_restantes, 0);
 
   const cards = [
     {
@@ -83,6 +88,20 @@ export default function DashboardPage() {
       value: resumen?.valor_merma ?? 0,
       icon: AlertTriangle,
       color: "text-red-500",
+      bg: "bg-red-50",
+    },
+    {
+      title: "Jabas por Vencer",
+      value: jabasPorVencer,
+      icon: Clock,
+      color: "text-yellow-600",
+      bg: "bg-yellow-50",
+    },
+    {
+      title: "Jabas Vencidas",
+      value: jabasVencidas,
+      icon: Ban,
+      color: "text-red-600",
       bg: "bg-red-50",
     },
   ];

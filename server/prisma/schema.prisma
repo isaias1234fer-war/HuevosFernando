@@ -12,6 +12,8 @@ model Calidad {
   nombre           String    @unique
   requiere_limpieza Boolean  @default(false)
   precio_venta_jaba Decimal   @default(0) @db.Decimal(10, 2)
+  dias_conservacion_min Int?
+  dias_conservacion_max Int?
   compras          Compra[]
   ventas           Venta[]
 }
@@ -27,6 +29,7 @@ model Compra {
   costo_total     Decimal   @db.Decimal(10, 2)
   notas           String?
   limpieza        Limpieza?
+  ventas          Venta[]
 }
 
 model Limpieza {
@@ -52,6 +55,8 @@ model Venta {
   tipo_pago       String    @default("contado")
   estado_pago     String    @default("pagado")
   saldo_pendiente Decimal   @default(0) @db.Decimal(10, 2)
+  compra_id       Int?
+  compra          Compra?   @relation(fields: [compra_id], references: [id])
   pagos           Pago[]
 }
 

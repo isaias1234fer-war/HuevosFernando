@@ -1,11 +1,12 @@
 import { Router, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../prisma';
+import { sugerirLoteFIFO } from '../services/lotes';
 
 export const ventasRouter = Router();
 
 ventasRouter.post('/', async (req: AuthRequest, res: Response) => {
-  const { fecha, calidad_id, cantidad_jabas, precio_por_jaba, notas, tipo_pago, cliente } = req.body;
+  const { fecha, calidad_id, cantidad_jabas, precio_por_jaba, notas, tipo_pago, cliente, compra_id } = req.body;
 
   if (!calidad_id || !cantidad_jabas || !precio_por_jaba) {
     return res.status(400).json({ error: 'Faltan campos requeridos' });
@@ -13,6 +14,11 @@ ventasRouter.post('/', async (req: AuthRequest, res: Response) => {
 
   const total = Number(cantidad_jabas) * Number(precio_por_jaba);
   const isFiado = tipo_pago === 'fiado';
+
+  let loteId = compra_id ? parseInt(compra_id) : null;
+  if (!loteId) {
+    loteId = await sugerirLoteFIFO(parseInt(calidad_id));
+  }
 
   const venta = await prisma.venta.create({
     data: {
@@ -26,11 +32,12 @@ ventasRouter.post('/', async (req: AuthRequest, res: Response) => {
       tipo_pago: isFiado ? 'fiado' : 'contado',
       estado_pago: isFiado ? 'pendiente' : 'pagado',
       saldo_pendiente: isFiado ? total : 0,
+      compra_id: loteId || undefined,
       pagos: isFiado ? undefined : {
         create: { monto: total, fecha: fecha ? new Date(fecha) : new Date(), notas: 'Pago al contado' },
       },
     },
-    include: { calidad: true, pagos: true },
+    include: { calidad: true, compra: true, pagos: true },
   });
 
   res.status(201).json(venta);
@@ -50,7 +57,7 @@ ventasRouter.get('/', async (req: AuthRequest, res: Response) => {
 
   const ventas = await prisma.venta.findMany({
     where,
-    include: { calidad: true, pagos: { orderBy: { fecha: 'desc' } } },
+    include: { calidad: true, compra: true, pagos: { orderBy: { fecha: 'desc' } } },
     orderBy: { fecha: 'desc' },
   });
 

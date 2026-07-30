@@ -80,6 +80,8 @@ export const api = {
 
   getInventario: () => fetchAPI("/api/inventario"),
 
+  getLotes: () => fetchAPI("/api/inventario/lotes"),
+
   getResumen: (params?: string) =>
     fetchAPI(`/api/reportes/resumen${params ? `?${params}` : ""}`),
 };
