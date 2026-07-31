@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -13,7 +14,6 @@ import {
   Package,
   BarChart3,
   LogOut,
-  Egg,
   CreditCard,
 } from "lucide-react";
 
@@ -38,8 +38,8 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 bg-white border-r min-h-screen p-4 flex flex-col">
-      <div className="flex items-center gap-2 mb-8 px-2">
-        <Egg className="h-6 w-6 text-primary" />
+      <div className="flex items-center gap-3 mb-8 px-2">
+        <Image src="/logo.jpg" alt="Huevos Fernando" width={40} height={40} className="rounded-full object-cover" />
         <span className="font-bold text-lg">Huevos Fernando</span>
       </div>
 

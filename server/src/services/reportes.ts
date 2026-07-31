@@ -23,7 +23,7 @@ export async function getResumen(desde?: string, hasta?: string) {
     }
   }
 
-  const gananciaPorCalidad = [];
+  const gananciaPorCalidad: { calidad_id: number; calidad_nombre: string; ingresos: number; inversion: number; ganancia: number }[] = [];
   for (const venta of ventas) {
     const existing = gananciaPorCalidad.find(g => g.calidad_id === venta.calidad_id);
     if (existing) {
@@ -33,6 +33,8 @@ export async function getResumen(desde?: string, hasta?: string) {
         calidad_id: venta.calidad_id,
         calidad_nombre: venta.calidad.nombre,
         ingresos: Number(venta.total),
+        inversion: 0,
+        ganancia: 0,
       });
     }
   }

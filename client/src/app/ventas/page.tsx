@@ -32,6 +32,10 @@ export default function VentasPage() {
   const [abonoNotas, setAbonoNotas] = useState("");
   const [lotes, setLotes] = useState<any[]>([]);
   const [compraId, setCompraId] = useState("");
+  const [editCalidadOpen, setEditCalidadOpen] = useState(false);
+  const [editPrecio, setEditPrecio] = useState("");
+  const [editConsMin, setEditConsMin] = useState("");
+  const [editConsMax, setEditConsMax] = useState("");
 
   const fetchCalidades = useCallback(async () => {
     const data = await api.getCalidades();
@@ -72,11 +76,6 @@ export default function VentasPage() {
 
   const calidadSeleccionada = calidades.find((c) => String(c.id) === calidadId);
   const total = Number(cantidadJabas) * Number(precioPorJaba) || 0;
-
-  const [editCalidadOpen, setEditCalidadOpen] = useState(false);
-  const [editPrecio, setEditPrecio] = useState("");
-  const [editConsMin, setEditConsMin] = useState("");
-  const [editConsMax, setEditConsMax] = useState("");
 
   const handleOpenEditCalidad = () => {
     if (!calidadSeleccionada) return;
@@ -177,7 +176,7 @@ export default function VentasPage() {
                   onChange={(e) => setCalidadId(e.target.value)}
                   options={calidades.map((c) => ({
                     value: String(c.id),
-                    label: `${c.nombre} - S/ ${c.precio_venta_jaba}/jaba`,
+                    label: c.nombre + " - S/ " + c.precio_venta_jaba + "/jaba",
                   }))}
                   placeholder="Seleccionar calidad"
                   required
@@ -191,7 +190,7 @@ export default function VentasPage() {
                     onChange={(e) => setCompraId(e.target.value)}
                     options={lotes.map((l: any) => ({
                       value: String(l.compra_id),
-                      label: `#${l.compra_id} - ${l.jabas_restantes} jabas disp. (${new Date(l.fecha_compra).toLocaleDateString()})`,
+                      label: "#" + l.compra_id + " - " + l.jabas_restantes + " jabas disp. (" + new Date(l.fecha_compra).toLocaleDateString() + ")",
                     }))}
                     placeholder="Sin asignar lote"
                   />
@@ -199,11 +198,7 @@ export default function VentasPage() {
               )}
               <div className="space-y-2">
                 <Label>Cantidad (jabas)</Label>
-                <Input
-                  type="number" value={cantidadJabas}
-                  onChange={(e) => setCantidadJabas(e.target.value)}
-                  required min="1"
-                />
+                <Input type="number" value={cantidadJabas} onChange={(e) => setCantidadJabas(e.target.value)} required min="1" />
               </div>
               <div className="space-y-2">
                 <Label>
@@ -215,11 +210,7 @@ export default function VentasPage() {
                   )}
                 </Label>
                 <div className="flex gap-2">
-                  <Input
-                    type="number" step="0.01" value={precioPorJaba}
-                    onChange={(e) => setPrecioPorJaba(e.target.value)}
-                    required min="0"
-                  />
+                  <Input type="number" step="0.01" value={precioPorJaba} onChange={(e) => setPrecioPorJaba(e.target.value)} required min="0" />
                   {calidadId && (
                     <Button type="button" variant="outline" size="icon" onClick={handleOpenEditCalidad} title="Editar configuración de calidad">
                       <Pencil className="h-4 w-4" />
@@ -315,23 +306,18 @@ export default function VentasPage() {
                       <span className={v.tipo_pago === "fiado" ? "text-orange-600 font-medium" : "text-green-600"}>{v.tipo_pago}</span>
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${badgeClass(v.estado_pago)}`}>{v.estado_pago}</span>
+                      <span className={"inline-block px-2 py-0.5 rounded text-xs font-medium " + badgeClass(v.estado_pago)}>{v.estado_pago}</span>
                     </TableCell>
                     <TableCell>{v.cliente || "-"}</TableCell>
                     <TableCell className="font-medium">{v.tipo_pago === "fiado" ? formatCurrency(Number(v.saldo_pendiente)) : "-"}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{v.compra_id ? `#${v.compra_id}` : "-"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{v.compra_id ? "#" + v.compra_id : "-"}</TableCell>
                     <TableCell>{v.notas || "-"}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
                         {v.tipo_pago === "fiado" && Number(v.saldo_pendiente) > 0 && (
                           <Button
                             variant="ghost" size="sm"
-                            onClick={() => {
-                              setAbonoVentaId(v.id);
-                              setAbonoMonto(String(Number(v.saldo_pendiente)));
-                              setAbonoFecha("");
-                              setAbonoNotas("");
-                            }}
+                            onClick={() => { setAbonoVentaId(v.id); setAbonoMonto(String(Number(v.saldo_pendiente))); setAbonoFecha(""); setAbonoNotas(""); }}
                             className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
                             title="Registrar abono"
                           >
@@ -384,7 +370,9 @@ export default function VentasPage() {
             </Card>
           </div>
         )}
+
         {abonoVentaId && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setAbonoVentaId(null)}>
             <Card className="w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
               <CardHeader>
                 <CardTitle>Registrar Abono</CardTitle>
