@@ -2,12 +2,12 @@ import prisma from '../prisma';
 
 export async function getLotes() {
   const config = await prisma.configuracion.findFirst();
-  const huevosPorJaba = config?.huevos_por_jaba || 30;
+  const huevosPorJaba = config?.huevos_por_jaba || 360;
 
   const compras = await prisma.compra.findMany({
     include: {
       calidad: true,
-      limpieza: true,
+      limpiezas: true,
       ventas: { select: { cantidad_jabas: true } },
     },
     orderBy: { fecha: 'asc' },
@@ -20,8 +20,8 @@ export async function getLotes() {
   for (const c of compras) {
     if (!c.calidad.dias_conservacion_min || !c.calidad.dias_conservacion_max) continue;
 
-    const jabasRotas = c.limpieza ? Number(c.limpieza.jabas_rotas_equivalente) : 0;
-    const jabasVendidas = c.ventas.reduce((sum, v) => sum + v.cantidad_jabas, 0);
+    const jabasRotas = c.limpiezas.reduce((sum, l) => sum + Number(l.jabas_rotas_equivalente), 0);
+    const jabasVendidas = c.ventas.reduce((sum, v) => sum + Number(v.cantidad_jabas), 0);
     const jabasRestantes = c.cantidad_jabas - jabasRotas - jabasVendidas;
 
     if (jabasRestantes <= 0) continue;
@@ -48,9 +48,9 @@ export async function getLotes() {
       calidad_nombre: c.calidad.nombre,
       fecha_compra: c.fecha,
       jabas_compradas: c.cantidad_jabas,
-      jabas_rotas: Number(jabasRotas.toFixed(2)),
-      jabas_vendidas: jabasVendidas,
-      jabas_restantes: jabasRestantes,
+      jabas_rotas: Number(jabasRotas.toFixed(4)),
+      jabas_vendidas: Number(jabasVendidas.toFixed(4)),
+      jabas_restantes: Number(jabasRestantes.toFixed(4)),
       fecha_vencimiento_min: fechaVenMin,
       fecha_vencimiento_max: fechaVenMax,
       estado,

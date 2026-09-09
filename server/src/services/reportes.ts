@@ -8,7 +8,7 @@ export async function getResumen(desde?: string, hasta?: string) {
 
   const where = Object.keys(dateFilter).length ? { fecha: dateFilter } : {};
 
-  const compras = await prisma.compra.findMany({ where, include: { calidad: true, limpieza: true } });
+  const compras = await prisma.compra.findMany({ where, include: { calidad: true, limpiezas: true } });
   const ventas = await prisma.venta.findMany({ where, include: { calidad: true } });
 
   const inversionTotal = compras.reduce((sum, c) => sum + Number(c.costo_total), 0);
@@ -17,9 +17,12 @@ export async function getResumen(desde?: string, hasta?: string) {
 
   let valorMerma = 0;
   for (const c of compras) {
-    if (c.limpieza && Number(c.limpieza.jabas_rotas_equivalente) > 0) {
-      const costoReal = await getCostoRealPorJaba(c.id);
-      valorMerma += Number(c.limpieza.jabas_rotas_equivalente) * costoReal;
+    if (c.limpiezas && c.limpiezas.length > 0) {
+      const totalRotas = c.limpiezas.reduce((sum, l) => sum + Number(l.jabas_rotas_equivalente), 0);
+      if (totalRotas > 0) {
+        const costoReal = await getCostoRealPorJaba(c.id);
+        valorMerma += totalRotas * costoReal;
+      }
     }
   }
 

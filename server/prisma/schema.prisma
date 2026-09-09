@@ -28,17 +28,17 @@ model Compra {
   precio_por_kg   Decimal   @db.Decimal(10, 2)
   costo_total     Decimal   @db.Decimal(10, 2)
   notas           String?
-  limpieza        Limpieza?
+  limpiezas       Limpieza[]
   ventas          Venta[]
 }
 
 model Limpieza {
   id                  Int      @id @default(autoincrement())
-  compra_id           Int      @unique
+  compra_id           Int
   compra              Compra   @relation(fields: [compra_id], references: [id], onDelete: Cascade)
   fecha               DateTime @default(now())
   huevos_rotos        Int
-  jabas_rotas_equivalente Decimal @db.Decimal(10, 2)
+  jabas_rotas_equivalente Decimal @db.Decimal(10, 4)
   observaciones       String?
 }
 
@@ -47,7 +47,9 @@ model Venta {
   fecha           DateTime  @default(now())
   calidad_id      Int
   calidad         Calidad   @relation(fields: [calidad_id], references: [id])
-  cantidad_jabas  Int
+  unidad_medida   String    @default("jabas") // jabas, paquetes, celdas, unidades
+  cantidad_unidades Decimal @default(1) @db.Decimal(10, 2)
+  cantidad_jabas  Decimal   @db.Decimal(10, 4)
   precio_por_jaba Decimal   @db.Decimal(10, 2)
   total           Decimal   @db.Decimal(10, 2)
   notas           String?

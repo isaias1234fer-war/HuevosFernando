@@ -57,8 +57,17 @@ export const api = {
   getLimpiezas: (params?: string) =>
     fetchAPI(`/api/limpiezas${params ? `?${params}` : ""}`),
 
+  deleteLimpieza: (id: number) =>
+    fetchAPI(`/api/limpiezas/${id}`, { method: "DELETE" }),
+
   createVenta: (data: any) =>
     fetchAPI("/api/ventas", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  createVentaLote: (data: any) =>
+    fetchAPI("/api/ventas/lote", {
       method: "POST",
       body: JSON.stringify(data),
     }),

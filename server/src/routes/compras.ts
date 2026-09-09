@@ -48,7 +48,7 @@ comprasRouter.get('/', async (req: AuthRequest, res: Response) => {
 
     const compras = await prisma.compra.findMany({
       where,
-      include: { calidad: true, limpieza: true },
+      include: { calidad: true, limpiezas: true },
       orderBy: { fecha: 'desc' },
     });
 

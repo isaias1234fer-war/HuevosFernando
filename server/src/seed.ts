@@ -18,8 +18,8 @@ async function seed() {
 
   await prisma.configuracion.upsert({
     where: { id: 1 },
-    update: { huevos_por_jaba: 30 },
-    create: { huevos_por_jaba: 30 },
+    update: { huevos_por_jaba: 360 },
+    create: { huevos_por_jaba: 360 },
   });
 
   console.log('Seed completed');
