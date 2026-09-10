@@ -93,6 +93,7 @@ export default function VentasPage() {
   // ---- Modals ----
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [abonoVenta, setAbonoVenta] = useState<any | null>(null);
+  const [abonoGrupo, setAbonoGrupo] = useState<any[] | null>(null);
   const [abonoMonto, setAbonoMonto] = useState("");
   const [abonoFecha, setAbonoFecha] = useState("");
   const [abonoNotas, setAbonoNotas] = useState("");
@@ -152,8 +153,9 @@ export default function VentasPage() {
       setItemPrecio("");
       return;
     }
-    const cal = calidades.find((c) => String(c.id) === itemCalidadId);
-    if (cal) setItemPrecio(String(cal.precio_venta_jaba));
+    // NO establecer el precio automáticamente - el vendedor lo define
+    // const cal = calidades.find((c) => String(c.id) === itemCalidadId);
+    // if (cal) setItemPrecio(String(cal.precio_venta_jaba));
 
     const lotesCalidad = todosLotes.filter(
       (l: any) =>
@@ -187,6 +189,21 @@ export default function VentasPage() {
       info("Completa todos los campos del producto antes de agregar");
       return;
     }
+
+    // Validar que haya inventario disponible
+    const jabasSolicitadas = toJabas(Number(itemCantidad), itemUnidad);
+    if (itemLotes.length === 0) {
+      error("No hay inventario disponible para esta calidad. Primero registra una compra.");
+      return;
+    }
+
+    // Verificar stock disponible en el lote seleccionado
+    const loteSeleccionado = itemLotes.find((l: any) => String(l.compra_id) === itemCompraId);
+    if (!loteSeleccionado || Number(loteSeleccionado.jabas_restantes) < jabasSolicitadas) {
+      error(`Stock insuficiente. Disponible: ${loteSeleccionado ? Number(loteSeleccionado.jabas_restantes).toFixed(2) : 0} jabas`);
+      return;
+    }
+
     const cal = calidades.find((c) => String(c.id) === itemCalidadId);
     setCart((prev) => [
       ...prev,
@@ -275,13 +292,40 @@ export default function VentasPage() {
     e.preventDefault();
     if (!abonoVenta) return;
     try {
-      await api.createPago({
-        venta_id: abonoVenta.id,
-        monto: abonoMonto,
-        fecha: abonoFecha || undefined,
-        notas: abonoNotas || undefined,
-      });
+      // Si es un grupo de ventas, distribuir el abono proporcionalmente
+      if (abonoGrupo && abonoGrupo.length > 1) {
+        const montoTotal = Number(abonoMonto);
+        const saldoTotal = abonoGrupo.reduce((sum: number, v: any) => sum + Number(v.saldo_pendiente || 0), 0);
+        
+        // Distribuir proporcionalmente según el saldo pendiente de cada venta
+        for (const venta of abonoGrupo) {
+          const saldoVenta = Number(venta.saldo_pendiente || 0);
+          if (saldoVenta > 0) {
+            const proporcion = saldoVenta / saldoTotal;
+            const montoVenta = Math.min(montoTotal * proporcion, saldoVenta);
+            
+            if (montoVenta > 0) {
+              await api.createPago({
+                venta_id: venta.id,
+                monto: montoVenta.toFixed(2),
+                fecha: abonoFecha || undefined,
+                notas: abonoNotas || undefined,
+              });
+            }
+          }
+        }
+      } else {
+        // Venta individual
+        await api.createPago({
+          venta_id: abonoVenta.id,
+          monto: abonoMonto,
+          fecha: abonoFecha || undefined,
+          notas: abonoNotas || undefined,
+        });
+      }
+      
       setAbonoVenta(null);
+      setAbonoGrupo(null);
       setAbonoMonto("");
       setAbonoFecha("");
       setAbonoNotas("");
@@ -319,6 +363,27 @@ export default function VentasPage() {
     }
   };
 
+  // Agrupar ventas por transacción (misma fecha, cliente, tipo_pago y notas)
+  const agruparVentasPorTransaccion = (ventasArray: any[]) => {
+    const grupos: Record<string, any[]> = {};
+    
+    ventasArray.forEach((v) => {
+      // Crear clave única basada en fecha, cliente, tipo_pago y notas
+      const fechaKey = v.fecha ? new Date(v.fecha).toISOString().split('T')[0] : 'no-fecha';
+      const clienteKey = v.cliente || 'sin-cliente';
+      const pagoKey = v.tipo_pago;
+      const notasKey = v.notas || 'sin-notas';
+      const clave = `${fechaKey}|${clienteKey}|${pagoKey}|${notasKey}`;
+      
+      if (!grupos[clave]) {
+        grupos[clave] = [];
+      }
+      grupos[clave].push(v);
+    });
+    
+    return Object.values(grupos);
+  };
+
   const ventasFiltradas = ventas.filter((v) => {
     if (!searchCliente) return true;
     return (
@@ -326,6 +391,8 @@ export default function VentasPage() {
       (v.notas && v.notas.toLowerCase().includes(searchCliente.toLowerCase()))
     );
   });
+
+  const ventasAgrupadas = agruparVentasPorTransaccion(ventasFiltradas);
 
   return (
     <AppLayout>
@@ -391,87 +458,107 @@ export default function VentasPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Fecha</TableHead>
-                  <TableHead>Calidad</TableHead>
-                  <TableHead>Cantidad</TableHead>
-                  <TableHead>Precio/Jaba</TableHead>
+                  <TableHead>Calidades</TableHead>
+                  <TableHead>Cantidad Total</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Pago</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Saldo</TableHead>
-                  <TableHead>Lote</TableHead>
                   <TableHead>Notas</TableHead>
                   <TableHead className="text-right pr-4">Acc.</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ventasFiltradas.length === 0 ? (
+                {ventasAgrupadas.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-12 text-slate-400">
+                    <TableCell colSpan={10} className="text-center py-12 text-slate-400">
                       <TrendingUp className="w-10 h-10 mx-auto mb-2 opacity-30" />
                       <p className="font-semibold text-slate-600">No se encontraron ventas</p>
                       <p className="text-xs mt-1">Ajuste los filtros o registre una nueva venta.</p>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  ventasFiltradas.map((v) => (
-                    <TableRow key={v.id} className="group">
-                      <TableCell className="font-medium text-xs text-slate-600 whitespace-nowrap">{formatDate(v.fecha)}</TableCell>
-                      <TableCell className="font-bold text-slate-900">{v.calidad?.nombre}</TableCell>
-                      <TableCell className="font-semibold text-slate-800">
-                        {v.unidad_medida && v.unidad_medida !== "jabas"
-                          ? `${Number(v.cantidad_unidades)} ${v.unidad_medida}`
-                          : `${Number(v.cantidad_jabas).toFixed(2)} jabas`}
-                      </TableCell>
-                      <TableCell className="text-slate-600 text-xs">{formatCurrency(Number(v.precio_por_jaba))}</TableCell>
-                      <TableCell className="font-extrabold text-slate-900">{formatCurrency(Number(v.total))}</TableCell>
-                      <TableCell>
-                        <Badge variant={v.tipo_pago === "fiado" ? "warning" : "success"} dot>
-                          {v.tipo_pago === "fiado" ? "Fiado" : "Contado"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={v.estado_pago === "pagado" ? "success" : v.estado_pago === "parcial" ? "warning" : "danger"}>
-                          {v.estado_pago}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium text-xs text-slate-800">
-                        {v.cliente ? (
-                          <span className="flex items-center gap-1">
-                            <User className="w-3 h-3 text-slate-400" />{v.cliente}
-                          </span>
-                        ) : <span className="text-slate-400">-</span>}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {v.tipo_pago === "fiado" && Number(v.saldo_pendiente) > 0 ? (
-                          <span className="font-bold text-rose-600">{formatCurrency(Number(v.saldo_pendiente))}</span>
-                        ) : <span className="text-slate-400">-</span>}
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-500 font-mono">{v.compra_id ? `#${v.compra_id}` : "-"}</TableCell>
-                      <TableCell className="text-xs text-slate-500 max-w-xs truncate">{v.notas || "-"}</TableCell>
-                      <TableCell className="text-right pr-4">
-                        <div className="flex items-center justify-end gap-1">
-                          {v.tipo_pago === "fiado" && Number(v.saldo_pendiente) > 0 && (
-                            <Button
-                              variant="outline" size="sm"
-                              onClick={() => { setAbonoVenta(v); setAbonoMonto(String(Number(v.saldo_pendiente))); setAbonoFecha(""); setAbonoNotas(""); }}
-                              className="h-8 px-2 text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+                  ventasAgrupadas.map((grupo, grupoIdx) => {
+                    const primeraVenta = grupo[0];
+                    const totalGrupo = grupo.reduce((sum: number, v: any) => sum + Number(v.total), 0);
+                    const totalJabas = grupo.reduce((sum: number, v: any) => sum + Number(v.cantidad_jabas), 0);
+                    const saldoPendiente = grupo.reduce((sum: number, v: any) => sum + Number(v.saldo_pendiente || 0), 0);
+                    const calidadesTexto = grupo.map((v: any) => v.calidad?.nombre).join(', ');
+                    
+                    return (
+                      <TableRow key={grupoIdx} className="group">
+                        <TableCell className="font-medium text-xs text-slate-600 whitespace-nowrap">{formatDate(primeraVenta.fecha)}</TableCell>
+                        <TableCell className="font-bold text-slate-900">
+                          <div className="flex flex-col gap-0.5">
+                            {grupo.map((v: any, idx: number) => (
+                              <span key={v.id} className="text-xs">
+                                {v.calidad?.nombre} ({v.unidad_medida !== "jabas" ? `${Number(v.cantidad_unidades)} ${v.unidad_medida}` : `${Number(v.cantidad_jabas).toFixed(2)} jabas`})
+                              </span>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-semibold text-slate-800">
+                          {totalJabas.toFixed(2)} jabas
+                        </TableCell>
+                        <TableCell className="font-extrabold text-slate-900">{formatCurrency(totalGrupo)}</TableCell>
+                        <TableCell>
+                          <Badge variant={primeraVenta.tipo_pago === "fiado" ? "warning" : "success"} dot>
+                            {primeraVenta.tipo_pago === "fiado" ? "Fiado" : "Contado"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={saldoPendiente === 0 ? "success" : saldoPendiente < totalGrupo ? "warning" : "danger"}>
+                            {saldoPendiente === 0 ? "pagado" : saldoPendiente < totalGrupo ? "parcial" : "pendiente"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium text-xs text-slate-800">
+                          {primeraVenta.cliente ? (
+                            <span className="flex items-center gap-1">
+                              <User className="w-3 h-3 text-slate-400" />{primeraVenta.cliente}
+                            </span>
+                          ) : <span className="text-slate-400">-</span>}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {primeraVenta.tipo_pago === "fiado" && saldoPendiente > 0 ? (
+                            <span className="font-bold text-rose-600">{formatCurrency(saldoPendiente)}</span>
+                          ) : <span className="text-slate-400">-</span>}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-500 max-w-xs truncate">{primeraVenta.notas || "-"}</TableCell>
+                        <TableCell className="text-right pr-4">
+                          <div className="flex items-center justify-end gap-1">
+                            {primeraVenta.tipo_pago === "fiado" && saldoPendiente > 0 && (
+                              <Button
+                                variant="outline" size="sm"
+                                onClick={() => { 
+                                  // Guardar el grupo completo para distribuir el abono
+                                  setAbonoGrupo(grupo);
+                                  setAbonoVenta({ ...primeraVenta, saldo_pendiente: saldoPendiente, total: totalGrupo }); 
+                                  setAbonoMonto(String(saldoPendiente)); 
+                                  setAbonoFecha(""); 
+                                  setAbonoNotas(""); 
+                                }}
+                                className="h-8 px-2 text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+                              >
+                                <CreditCard className="w-3.5 h-3.5 mr-1" />
+                                <span className="text-[11px]">Cobrar</span>
+                              </Button>
+                            )}
+                            <button
+                              onClick={() => {
+                                if (confirm(`¿Eliminar esta venta con ${grupo.length} producto(s)? El stock será restaurado.`)) {
+                                  grupo.forEach((v: any) => handleDelete(v.id));
+                                }
+                              }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100"
                             >
-                              <CreditCard className="w-3.5 h-3.5 mr-1" />
-                              <span className="text-[11px]">Cobrar</span>
-                            </Button>
-                          )}
-                          <button
-                            onClick={() => handleDelete(v.id)}
-                            disabled={deletingId === v.id}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -484,12 +571,12 @@ export default function VentasPage() {
           onClose={() => { resetModal(); setModalVentaOpen(false); }}
           title="Nueva Venta"
           description="Agrega uno o varios productos al pedido, luego confirma"
-          maxWidth="xl"
+          maxWidth="2xl"
         >
           <form onSubmit={handleCreateVenta} className="space-y-5">
 
             {/* --- Datos globales del pedido --- */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-4 border-b border-slate-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pb-4 border-b border-slate-100">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-slate-600">Condición de Pago</Label>
                 <Select
@@ -529,7 +616,7 @@ export default function VentasPage() {
               <p className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <PackagePlus className="w-3.5 h-3.5" /> Agregar Producto
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* Calidad */}
                 <div className="space-y-1 col-span-2 sm:col-span-1">
                   <Label className="text-[11px] font-bold uppercase text-slate-500">Calidad</Label>
@@ -563,23 +650,18 @@ export default function VentasPage() {
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <Label className="text-[11px] font-bold uppercase text-slate-500">S/ por jaba</Label>
-                    {itemCalidadId && (
-                      <button type="button" onClick={() => handleOpenEditCalidad(parseInt(itemCalidadId))}
-                        className="text-[10px] text-emerald-600 hover:underline flex items-center gap-0.5">
-                        <Pencil className="w-2.5 h-2.5" /> Edit
-                      </button>
-                    )}
                   </div>
                   <Input
                     type="number" min="0" step="0.01"
                     value={itemPrecio}
                     onChange={(e) => setItemPrecio(e.target.value)}
-                    placeholder="0.00"
+                    placeholder="Ingresar precio..."
+                    required
                   />
                 </div>
               </div>
               {/* Lote FIFO */}
-              {itemLotes.length > 0 && (
+              {itemLotes.length > 0 ? (
                 <div className="space-y-1">
                   <Label className="text-[11px] font-bold uppercase text-slate-500">Lote (FIFO sugerido)</Label>
                   <Select
@@ -591,7 +673,12 @@ export default function VentasPage() {
                     }))}
                   />
                 </div>
-              )}
+              ) : itemCalidadId ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                  <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Sin inventario</p>
+                  <p className="text-xs text-amber-600">Registra una compra de esta calidad primero</p>
+                </div>
+              ) : null}
               {/* Subtotal preview */}
               {itemCantidad && itemPrecio && (
                 <div className="flex items-center justify-between text-xs bg-white rounded-xl px-3 py-2 border border-slate-200">
@@ -664,9 +751,10 @@ export default function VentasPage() {
         {abonoVenta && (
           <DialogModal
             isOpen={!!abonoVenta}
-            onClose={() => setAbonoVenta(null)}
+            onClose={() => { setAbonoVenta(null); setAbonoGrupo(null); }}
             title="Registrar Cobro / Abono"
-            description={`Cliente: ${abonoVenta.cliente || "Sin nombre"} • Deuda: ${formatCurrency(Number(abonoVenta.saldo_pendiente))}`}
+            description={`Cliente: ${abonoVenta.cliente || "Sin nombre"} • Deuda: ${formatCurrency(Number(abonoVenta.saldo_pendiente))}${abonoGrupo && abonoGrupo.length > 1 ? ` (${abonoGrupo.length} productos)` : ''}`}
+            maxWidth="lg"
           >
             <form onSubmit={handleAbono} className="space-y-4">
               <div className="space-y-1.5">
@@ -696,6 +784,7 @@ export default function VentasPage() {
             onClose={() => setEditCalidadOpen(false)}
             title={`Configuración: ${calidades.find((c) => c.id === editingCalidadId)?.nombre}`}
             description="Ajuste el precio de venta y tiempo de conservación"
+            maxWidth="lg"
           >
             <form onSubmit={handleSaveEditCalidad} className="space-y-4">
               <div className="space-y-1.5">

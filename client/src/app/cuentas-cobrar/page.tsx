@@ -31,6 +31,7 @@ export default function CuentasCobrarPage() {
 
   // Abono Modal states
   const [abonoVenta, setAbonoVenta] = useState<any | null>(null);
+  const [abonoGrupo, setAbonoGrupo] = useState<any[] | null>(null);
   const [abonoMonto, setAbonoMonto] = useState("");
   const [abonoFecha, setAbonoFecha] = useState("");
   const [abonoNotas, setAbonoNotas] = useState("");
@@ -61,13 +62,40 @@ export default function CuentasCobrarPage() {
     e.preventDefault();
     if (!abonoVenta) return;
     try {
-      await api.createPago({
-        venta_id: abonoVenta.id,
-        monto: abonoMonto,
-        fecha: abonoFecha || undefined,
-        notas: abonoNotas || undefined,
-      });
+      // Si es un grupo de ventas, distribuir el abono proporcionalmente
+      if (abonoGrupo && abonoGrupo.length > 1) {
+        const montoTotal = Number(abonoMonto);
+        const saldoTotal = abonoGrupo.reduce((sum: number, v: any) => sum + Number(v.saldo_pendiente || 0), 0);
+        
+        // Distribuir proporcionalmente según el saldo pendiente de cada venta
+        for (const venta of abonoGrupo) {
+          const saldoVenta = Number(venta.saldo_pendiente || 0);
+          if (saldoVenta > 0) {
+            const proporcion = saldoVenta / saldoTotal;
+            const montoVenta = Math.min(montoTotal * proporcion, saldoVenta);
+            
+            if (montoVenta > 0) {
+              await api.createPago({
+                venta_id: venta.id,
+                monto: montoVenta.toFixed(2),
+                fecha: abonoFecha || undefined,
+                notas: abonoNotas || undefined,
+              });
+            }
+          }
+        }
+      } else {
+        // Venta individual
+        await api.createPago({
+          venta_id: abonoVenta.id,
+          monto: abonoMonto,
+          fecha: abonoFecha || undefined,
+          notas: abonoNotas || undefined,
+        });
+      }
+      
       setAbonoVenta(null);
+      setAbonoGrupo(null);
       setAbonoMonto("");
       setAbonoFecha("");
       setAbonoNotas("");
@@ -83,6 +111,26 @@ export default function CuentasCobrarPage() {
     0
   );
 
+  // Agrupar ventas por transacción (misma fecha, cliente, tipo_pago y notas)
+  const agruparVentasPorTransaccion = (ventasArray: any[]) => {
+    const grupos: Record<string, any[]> = {};
+    
+    ventasArray.forEach((v) => {
+      const fechaKey = v.fecha ? new Date(v.fecha).toISOString().split('T')[0] : 'no-fecha';
+      const clienteKey = v.cliente || 'sin-cliente';
+      const pagoKey = v.tipo_pago;
+      const notasKey = v.notas || 'sin-notas';
+      const clave = `${fechaKey}|${clienteKey}|${pagoKey}|${notasKey}`;
+      
+      if (!grupos[clave]) {
+        grupos[clave] = [];
+      }
+      grupos[clave].push(v);
+    });
+    
+    return Object.values(grupos);
+  };
+
   const ventasFiltradas = ventas.filter((v) => {
     if (!searchCliente) return true;
     return (
@@ -90,6 +138,8 @@ export default function CuentasCobrarPage() {
       (v.calidad?.nombre && v.calidad.nombre.toLowerCase().includes(searchCliente.toLowerCase()))
     );
   });
+
+  const ventasAgrupadas = agruparVentasPorTransaccion(ventasFiltradas);
 
   return (
     <AppLayout>
@@ -159,7 +209,7 @@ export default function CuentasCobrarPage() {
                   <TableRow>
                     <TableHead>Fecha Venta</TableHead>
                     <TableHead>Cliente</TableHead>
-                    <TableHead>Calidad</TableHead>
+                    <TableHead>Calidades</TableHead>
                     <TableHead>Jabas</TableHead>
                     <TableHead>Monto Total</TableHead>
                     <TableHead>Saldo Pendiente</TableHead>
@@ -168,52 +218,64 @@ export default function CuentasCobrarPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {ventasFiltradas.map((v) => (
-                    <TableRow key={v.id} className="group">
-                      <TableCell className="text-xs text-slate-600 whitespace-nowrap">
-                        {formatDate(v.fecha)}
-                      </TableCell>
-                      <TableCell className="font-bold text-slate-900 flex items-center gap-1.5 pt-4">
-                        <User className="w-4 h-4 text-slate-400" />
-                        <span>{v.cliente || "Cliente sin nombre"}</span>
-                      </TableCell>
-                      <TableCell className="text-slate-800 font-medium">
-                        {v.calidad?.nombre}
-                      </TableCell>
-                      <TableCell className="font-semibold text-slate-700">
-                        {v.cantidad_jabas} jabas
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-600">
-                        {formatCurrency(Number(v.total))}
-                      </TableCell>
-                      <TableCell className="font-extrabold text-rose-600 text-sm">
-                        {formatCurrency(Number(v.saldo_pendiente))}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={v.estado_pago === "parcial" ? "warning" : "danger"}
-                          dot
-                        >
-                          {v.estado_pago === "parcial" ? "Parcial" : "Pendiente"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right pr-4">
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setAbonoVenta(v);
-                            setAbonoMonto(String(Number(v.saldo_pendiente)));
-                            setAbonoFecha("");
-                            setAbonoNotas("");
-                          }}
-                          className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 shadow-xs"
-                        >
-                          <CreditCard className="w-3.5 h-3.5 mr-1" />
-                          Cobrar
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {ventasAgrupadas.map((grupo, grupoIdx) => {
+                    const primeraVenta = grupo[0];
+                    const totalGrupo = grupo.reduce((sum: number, v: any) => sum + Number(v.total), 0);
+                    const totalJabas = grupo.reduce((sum: number, v: any) => sum + Number(v.cantidad_jabas), 0);
+                    const saldoPendiente = grupo.reduce((sum: number, v: any) => sum + Number(v.saldo_pendiente || 0), 0);
+                    
+                    return (
+                      <TableRow key={grupoIdx} className="group">
+                        <TableCell className="text-xs text-slate-600 whitespace-nowrap">
+                          {formatDate(primeraVenta.fecha)}
+                        </TableCell>
+                        <TableCell className="font-bold text-slate-900 flex items-center gap-1.5 pt-4">
+                          <User className="w-4 h-4 text-slate-400" />
+                          <span>{primeraVenta.cliente || "Cliente sin nombre"}</span>
+                        </TableCell>
+                        <TableCell className="text-slate-800 font-medium">
+                          <div className="flex flex-col gap-0.5">
+                            {grupo.map((v: any) => (
+                              <span key={v.id} className="text-xs">{v.calidad?.nombre}</span>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-semibold text-slate-700">
+                          {totalJabas.toFixed(2)} jabas
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-600">
+                          {formatCurrency(totalGrupo)}
+                        </TableCell>
+                        <TableCell className="font-extrabold text-rose-600 text-sm">
+                          {formatCurrency(saldoPendiente)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={saldoPendiente === 0 ? "success" : saldoPendiente < totalGrupo ? "warning" : "danger"}
+                            dot
+                          >
+                            {saldoPendiente === 0 ? "Pagado" : saldoPendiente < totalGrupo ? "Parcial" : "Pendiente"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right pr-4">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setAbonoGrupo(grupo);
+                              setAbonoVenta({ ...primeraVenta, saldo_pendiente: saldoPendiente, total: totalGrupo });
+                              setAbonoMonto(String(saldoPendiente));
+                              setAbonoFecha("");
+                              setAbonoNotas("");
+                            }}
+                            className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 shadow-xs"
+                          >
+                            <CreditCard className="w-3.5 h-3.5 mr-1" />
+                            Cobrar
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
@@ -224,11 +286,12 @@ export default function CuentasCobrarPage() {
         {abonoVenta && (
           <DialogModal
             isOpen={!!abonoVenta}
-            onClose={() => setAbonoVenta(null)}
+            onClose={() => { setAbonoVenta(null); setAbonoGrupo(null); }}
             title="Registrar Cobro a Cliente"
             description={`Cliente: ${abonoVenta.cliente || "Sin nombre"} • Saldo actual: ${formatCurrency(
               Number(abonoVenta.saldo_pendiente)
-            )}`}
+            )}${abonoGrupo && abonoGrupo.length > 1 ? ` (${abonoGrupo.length} productos)` : ''}`}
+            maxWidth="lg"
           >
             <form onSubmit={handleAbono} className="space-y-4">
               <div className="space-y-1.5">

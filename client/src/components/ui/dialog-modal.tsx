@@ -48,7 +48,7 @@ export function DialogModal({
   }[maxWidth];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
       {/* Backdrop with smooth blur */}
       <div
         className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity animate-fade-in"
@@ -59,25 +59,26 @@ export function DialogModal({
       {/* Modal Dialog Card */}
       <div
         className={cn(
-          "relative w-full bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all animate-fade-in z-10 my-8",
+          "relative w-full bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all animate-fade-in z-10 my-4 sm:my-8 mx-auto",
+          "max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw]",
           maxWidthClass
         )}
       >
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50/50">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-slate-50/50">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 truncate">{title}</h3>
             {description && (
-              <p className="text-xs text-slate-500 mt-0.5">{description}</p>
+              <p className="text-xs text-slate-500 mt-0.5 truncate sm:whitespace-normal">{description}</p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors ml-2 shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6 max-h-[calc(100vh-200px)] sm:max-h-[calc(100vh-250px)] overflow-y-auto">{children}</div>
       </div>
     </div>
   );

@@ -306,10 +306,10 @@ export default function ComprasPage() {
           onClose={() => setModalCompraOpen(false)}
           title="Registrar Nueva Compra"
           description="Ingrese los datos del proveedor y pesaje para crear el lote"
-          maxWidth="lg"
+          maxWidth="2xl"
         >
           <form onSubmit={handleCreateCompra} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {/* Calidad Selector */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-slate-600">
