@@ -10,7 +10,8 @@ interface ModalProps {
   title: React.ReactNode;
   description?: string;
   children: React.ReactNode;
-  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl";
+  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  className?: string;
 }
 
 export function DialogModal({
@@ -20,6 +21,7 @@ export function DialogModal({
   description,
   children,
   maxWidth = "md",
+  className,
 }: ModalProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -45,13 +47,15 @@ export function DialogModal({
     lg: "max-w-lg",
     xl: "max-w-xl",
     "2xl": "max-w-2xl",
+    "3xl": "max-w-3xl",
+    "4xl": "max-w-4xl",
   }[maxWidth];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-3 sm:p-6 overflow-y-auto">
       {/* Backdrop with smooth blur */}
       <div
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity animate-fade-in"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -59,12 +63,15 @@ export function DialogModal({
       {/* Modal Dialog Card */}
       <div
         className={cn(
-          "relative w-full bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all animate-fade-in z-10 my-4 sm:my-8 mx-auto",
+          "relative w-full bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all animate-fade-in z-10 my-2 sm:my-6 mx-auto flex flex-col",
+          "max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-3rem)]",
           "max-w-[95vw] sm:max-w-[90vw] md:max-w-[85vw]",
-          maxWidthClass
+          maxWidthClass,
+          className
         )}
       >
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-slate-50/50">
+        {/* Header - Fixed */}
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
           <div className="flex-1 min-w-0">
             <h3 className="text-base sm:text-lg font-bold text-slate-900 truncate">{title}</h3>
             {description && (
@@ -78,7 +85,8 @@ export function DialogModal({
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-4 sm:p-6 max-h-[calc(100vh-200px)] sm:max-h-[calc(100vh-250px)] overflow-y-auto">{children}</div>
+        {/* Body - Scrollable */}
+        <div className="overflow-y-auto flex-1 p-4 sm:p-5">{children}</div>
       </div>
     </div>
   );

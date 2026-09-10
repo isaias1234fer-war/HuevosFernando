@@ -1,321 +1,489 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { DialogModal } from "@/components/ui/dialog-modal";
+import { useToast } from "@/components/ui/toast-notification";
 import AppLayout from "@/app/layout-wrapper";
 import {
-  Package,
-  AlertCircle,
-  Clock,
-  Ban,
-  Boxes,
-  ShieldCheck,
-  TrendingUp,
-  BarChart2,
+  ShoppingCart,
+  Plus,
+  Trash2,
+  Filter,
   Calendar,
+  Scale,
+  DollarSign,
+  Package,
 } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
 
-export default function InventarioPage() {
-  const [inventario, setInventario] = useState<any[]>([]);
-  const [lotes, setLotes] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function ComprasPage() {
+  const { success, error } = useToast();
+  const [calidades, setCalidades] = useState<any[]>([]);
+  const [compras, setCompras] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Modal & form states
+  const [modalCompraOpen, setModalCompraOpen] = useState(false);
+  const [calidadId, setCalidadId] = useState("");
+  const [cantidadJabas, setCantidadJabas] = useState("");
+  const [pesoTotal, setPesoTotal] = useState("");
+  const [precioKg, setPrecioKg] = useState("");
+  const [notas, setNotas] = useState("");
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  // Filters
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+  const [filtroCalidad, setFiltroCalidad] = useState("");
+
+  const fetchCalidades = useCallback(async () => {
+    try {
+      const data = await api.getCalidades();
+      setCalidades(data);
+    } catch {
+      error("Error al cargar calidades");
+    }
+  }, [error]);
+
+  const fetchCompras = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (desde) params.set("desde", desde);
+      if (hasta) params.set("hasta", hasta);
+      if (filtroCalidad) params.set("calidad_id", filtroCalidad);
+      const data = await api.getCompras(params.toString());
+      setCompras(data);
+    } catch {
+      error("Error al obtener el historial de compras");
+    } finally {
+      setLoading(false);
+    }
+  }, [desde, hasta, filtroCalidad, error]);
 
   useEffect(() => {
-    Promise.all([api.getInventario(), api.getLotes()])
-      .then(([invData, lotesData]) => {
-        setInventario(invData);
-        setLotes(lotesData);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+    fetchCalidades();
+    fetchCompras();
+  }, [fetchCalidades, fetchCompras]);
 
-  const jabasPorVencer = lotes
-    .filter((l) => l.estado === "por_vencer")
-    .reduce((s, l) => s + l.jabas_restantes, 0);
+  const costoTotalCalculado = Number(pesoTotal) * Number(precioKg) || 0;
+  const costoPorJabaCalculado =
+    Number(cantidadJabas) > 0 ? costoTotalCalculado / Number(cantidadJabas) : 0;
 
-  const jabasVencidas = lotes
-    .filter((l) => l.estado === "vencido")
-    .reduce((s, l) => s + l.jabas_restantes, 0);
+  const handleDelete = async (id: number) => {
+    if (
+      !confirm(
+        "¿Eliminar esta compra? También se eliminará el registro de limpieza asociado si existe."
+      )
+    )
+      return;
+    setDeletingId(id);
+    try {
+      await api.deleteCompra(id);
+      success("Compra eliminada del sistema");
+      fetchCompras();
+    } catch (err: any) {
+      error(err.message || "Error al eliminar la compra");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
-  const totalJabasDisponibles = inventario.reduce(
-    (sum, item) => sum + (item.disponible_jabas || 0),
+  const handleCreateCompra = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.createCompra({
+        calidad_id: parseInt(calidadId),
+        cantidad_jabas: parseInt(cantidadJabas),
+        peso_total_kg: pesoTotal,
+        precio_por_kg: precioKg,
+        notas,
+      });
+      setModalCompraOpen(false);
+      setCalidadId("");
+      setCantidadJabas("");
+      setPesoTotal("");
+      setPrecioKg("");
+      setNotas("");
+      success("¡Compra registrada y añadida a inventario!");
+      fetchCompras();
+    } catch (err: any) {
+      error(err.message || "Error al registrar la compra");
+    }
+  };
+
+  // Metrics
+  const totalInvertido = compras.reduce(
+    (sum, c) => sum + Number(c.costo_total || 0),
+    0
+  );
+  const totalJabas = compras.reduce(
+    (sum, c) => sum + Number(c.cantidad_jabas || 0),
+    0
+  );
+  const totalKg = compras.reduce(
+    (sum, c) => sum + Number(c.peso_total_kg || 0),
     0
   );
 
   return (
     <AppLayout>
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* Top Header Card */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2.5">
-              <Boxes className="w-6 h-6 text-emerald-600" />
-              Control de Almacén & Lotes
+              <ShoppingCart className="w-6 h-6 text-amber-600" />
+              Registro de Compras
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Monitoreo de existencias físicas y trazabilidad de caducidad por lote
+              Ingreso de nuevos lotes de huevos por peso y calidad
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="px-3.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5">
-              <Package className="w-4 h-4 text-emerald-600" />
-              <span>{totalJabasDisponibles} Jabas Totales en Stock</span>
-            </div>
-          </div>
+          <Button
+            onClick={() => setModalCompraOpen(true)}
+            className="gap-2 bg-amber-500 hover:bg-amber-600 shadow-md shadow-amber-500/20"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Registrar Compra</span>
+          </Button>
         </div>
 
-        {/* Quality Stock Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {inventario.map((item) => {
-            const hasStock = item.disponible_jabas > 0;
-            return (
-              <Card
-                key={item.calidad_id}
-                className="hover:border-slate-300 transition-all duration-200"
-              >
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <Badge variant="secondary" className="mb-2">
-                        {item.huevos_por_jaba} huevos/jaba
-                      </Badge>
-                      <h3 className="font-extrabold text-slate-900 text-lg">
-                        {item.calidad_nombre}
-                      </h3>
-                      <div className="flex items-baseline gap-1 mt-1">
-                        <span
-                          className={`text-3xl font-black ${
-                            hasStock ? "text-emerald-700" : "text-rose-600"
-                          }`}
-                        >
-                          {item.disponible_jabas}
-                        </span>
-                        <span className="text-xs text-slate-400 font-medium">
-                          jabas disp.
-                        </span>
-                      </div>
-                    </div>
-                    <div
-                      className={`p-3 rounded-2xl ${
-                        hasStock ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                      }`}
-                    >
-                      {hasStock ? (
-                        <Package className="w-6 h-6" />
-                      ) : (
-                        <AlertCircle className="w-6 h-6" />
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-slate-400 block text-[11px]">Compradas</span>
-                      <span className="font-bold text-slate-700">
-                        {item.total_compradas_jabas} jabas
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[11px]">Vendidas</span>
-                      <span className="font-bold text-slate-700">
-                        {item.total_vendidas_jabas} jabas
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[11px]">Rotas/Merma</span>
-                      <span className="font-bold text-rose-600">
-                        {item.total_rotas_jabas} jabas
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[11px]">Precio Venta</span>
-                      <span className="font-bold text-emerald-700">
-                        {formatCurrency(item.precio_venta_jaba)}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-
-          {/* Expiry Metric 1 */}
-          <Card className="border-amber-200 bg-amber-50/30">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <Badge variant="warning" className="mb-2">Alerta FIFO</Badge>
-                  <h3 className="font-extrabold text-amber-950 text-base">Por Vencer</h3>
-                  <div className="flex items-baseline gap-1 mt-1">
-                    <span className="text-3xl font-black text-amber-700">{jabasPorVencer}</span>
-                    <span className="text-xs text-amber-800/70 font-medium">jabas</span>
-                  </div>
-                  <p className="text-[11px] text-amber-700 mt-2">A &le; 3 días de caducar</p>
-                </div>
-                <div className="p-3 rounded-2xl bg-amber-100 text-amber-700">
-                  <Clock className="w-6 h-6" />
-                </div>
+        {/* Quick Stats Banner */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="border-amber-100 bg-gradient-to-br from-white to-amber-50/30">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Inversión Filtrada
+                </p>
+                <p className="text-xl font-extrabold text-amber-700 mt-0.5">
+                  {formatCurrency(totalInvertido)}
+                </p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-amber-100 text-amber-700">
+                <DollarSign className="w-5 h-5" />
               </div>
             </CardContent>
           </Card>
 
-          {/* Expiry Metric 2 */}
-          <Card className="border-rose-200 bg-rose-50/30">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <Badge variant="danger" className="mb-2">Crítico</Badge>
-                  <h3 className="font-extrabold text-rose-950 text-base">Vencidas</h3>
-                  <div className="flex items-baseline gap-1 mt-1">
-                    <span className="text-3xl font-black text-rose-700">{jabasVencidas}</span>
-                    <span className="text-xs text-rose-800/70 font-medium">jabas</span>
-                  </div>
-                  <p className="text-[11px] text-rose-700 mt-2">No aptas para despacho</p>
-                </div>
-                <div className="p-3 rounded-2xl bg-rose-100 text-rose-700">
-                  <Ban className="w-6 h-6" />
-                </div>
+          <Card className="border-slate-200/80">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Total Jabas
+                </p>
+                <p className="text-xl font-extrabold text-slate-900 mt-0.5">
+                  {totalJabas} jabas
+                </p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-100 text-slate-700">
+                <Package className="w-5 h-5" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-200/80">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Peso Total Recibido
+                </p>
+                <p className="text-xl font-extrabold text-slate-900 mt-0.5">
+                  {totalKg.toFixed(1)} kg
+                </p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-100 text-slate-700">
+                <Scale className="w-5 h-5" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Stock Chart Comparison */}
+        {/* Filter Toolbar */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <BarChart2 className="w-4 h-4 text-emerald-600" />
-              Balance de Jabas Disponibles vs Vendidas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={inventario}
-                  margin={{ top: 10, right: 20, left: -10, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="calidad_nombre" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <Tooltip
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-lg text-xs space-y-1">
-                            <p className="font-bold text-slate-900">{label}</p>
-                            {payload.map((p: any) => (
-                              <div key={p.name} className="flex justify-between gap-4">
-                                <span className="text-slate-600">{p.name}:</span>
-                                <span className="font-bold text-slate-900">{p.value} jabas</span>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Legend verticalAlign="top" height={36} iconType="circle" />
-                  <Bar dataKey="disponible_jabas" fill="#059669" name="Jabas Disponibles" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="total_vendidas_jabas" fill="#0284c7" name="Jabas Vendidas" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 text-xs">
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="date"
+                  value={desde}
+                  onChange={(e) => setDesde(e.target.value)}
+                  aria-label="Fecha inicial"
+                  className="bg-transparent text-xs text-slate-700 focus:outline-none"
+                />
+                <span className="text-slate-300">-</span>
+                <input
+                  type="date"
+                  value={hasta}
+                  onChange={(e) => setHasta(e.target.value)}
+                  aria-label="Fecha final"
+                  className="bg-transparent text-xs text-slate-700 focus:outline-none"
+                />
+              </div>
+
+              <Select
+                value={filtroCalidad}
+                onChange={(e) => setFiltroCalidad(e.target.value)}
+                options={calidades.map((c) => ({
+                  value: String(c.id),
+                  label: c.nombre,
+                }))}
+                placeholder="Todas las Calidades"
+                className="h-9 w-44 text-xs"
+              />
+
+              <Button
+                size="sm"
+                onClick={fetchCompras}
+                variant="outline"
+                className="h-9"
+              >
+                <Filter className="w-3.5 h-3.5 mr-1" />
+                Filtrar
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Lotes & Vencimiento Tracking Table */}
+        {/* Compras Table */}
         <Card>
           <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-base font-bold">Seguimiento de Lotes y Caducidad</CardTitle>
+              <CardTitle className="text-base">Historial de Compras</CardTitle>
               <p className="text-xs text-slate-500 mt-0.5">
-                Control de rotación de inventario con base en fechas de compra y conservación
+                {compras.length}{" "}
+                {compras.length === 1 ? "registro" : "registros"}
               </p>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            {lotes.length === 0 ? (
-              <div className="text-center py-12 text-slate-400">
-                <ShieldCheck className="w-10 h-10 mx-auto mb-2 opacity-30 text-emerald-600" />
-                <p className="font-semibold text-slate-600">No hay lotes con saldo pendiente</p>
-                <p className="text-xs mt-1">Todos los lotes han sido despachados en su totalidad.</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Lote #</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Calidad</TableHead>
+                  <TableHead>Jabas</TableHead>
+                  <TableHead>Peso Total</TableHead>
+                  <TableHead>Precio / Kg</TableHead>
+                  <TableHead>Costo Total</TableHead>
+                  <TableHead>Notas</TableHead>
+                  <TableHead className="w-16 text-right pr-4">Acción</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {compras.length === 0 ? (
                   <TableRow>
-                    <TableHead>Lote #</TableHead>
-                    <TableHead>Calidad</TableHead>
-                    <TableHead>Fecha Ingreso</TableHead>
-                    <TableHead>Jabas Restantes</TableHead>
-                    <TableHead>Vencimiento Sugerido</TableHead>
-                    <TableHead>Vencimiento Límite</TableHead>
-                    <TableHead>Estado del Lote</TableHead>
+                    <TableCell
+                      colSpan={9}
+                      className="text-center py-12 text-slate-400"
+                    >
+                      <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                      <p className="font-semibold text-slate-600">
+                        No hay compras registradas
+                      </p>
+                      <p className="text-xs mt-1">
+                        Haga clic en &quot;Registrar Compra&quot; para ingresar
+                        un nuevo lote.
+                      </p>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lotes.map((l) => (
-                    <TableRow key={l.compra_id}>
+                ) : (
+                  compras.map((c) => (
+                    <TableRow key={c.id}>
                       <TableCell className="font-mono text-xs font-bold text-slate-500">
-                        #{l.compra_id}
+                        #{c.id}
+                      </TableCell>
+                      <TableCell className="text-xs text-slate-600 whitespace-nowrap">
+                        {formatDate(c.fecha)}
                       </TableCell>
                       <TableCell className="font-bold text-slate-900">
-                        {l.calidad_nombre}
+                        {c.calidad?.nombre}
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600">
-                        {formatDate(l.fecha_compra)}
+                      <TableCell className="font-semibold text-slate-800">
+                        {c.cantidad_jabas} jabas
                       </TableCell>
-                      <TableCell className="font-extrabold text-slate-900 text-sm">
-                        {l.jabas_restantes} jabas
+                      <TableCell className="text-xs text-slate-700">
+                        {Number(c.peso_total_kg).toFixed(2)} kg
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600">
-                        {formatDate(l.fecha_vencimiento_min)}
+                      <TableCell className="text-xs text-slate-700">
+                        {formatCurrency(Number(c.precio_por_kg))} / kg
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600">
-                        {formatDate(l.fecha_vencimiento_max)}
+                      <TableCell className="font-extrabold text-amber-800">
+                        {formatCurrency(Number(c.costo_total))}
                       </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            l.estado === "vigente"
-                              ? "success"
-                              : l.estado === "por_vencer"
-                              ? "warning"
-                              : "danger"
-                          }
-                          dot
+                      <TableCell className="text-xs text-slate-500 max-w-xs truncate">
+                        {c.notas || "-"}
+                      </TableCell>
+                      <TableCell className="text-right pr-4">
+                        <button
+                          onClick={() => handleDelete(c.id)}
+                          disabled={deletingId === c.id}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          title="Eliminar compra"
                         >
-                          {l.estado === "vigente"
-                            ? "Vigente"
-                            : l.estado === "por_vencer"
-                            ? "Por Vencer"
-                            : "Vencido"}
-                        </Badge>
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
+
+        {/* Modal: Registrar Compra */}
+        <DialogModal
+          isOpen={modalCompraOpen}
+          onClose={() => setModalCompraOpen(false)}
+          title="Registrar Nueva Compra"
+          description="Ingrese los datos del proveedor y pesaje para crear el lote"
+          maxWidth="2xl"
+        >
+          <form
+            onSubmit={handleCreateCompra}
+            className="space-y-4 sm:space-y-5"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              {/* Calidad Selector */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-slate-600">
+                  Calidad de Huevo
+                </Label>
+                <Select
+                  value={calidadId}
+                  onChange={(e) => setCalidadId(e.target.value)}
+                  options={calidades.map((c) => ({
+                    value: String(c.id),
+                    label: c.nombre,
+                  }))}
+                  placeholder="Seleccionar calidad"
+                  required
+                  className="h-10"
+                />
+              </div>
+
+              {/* Cantidad Jabas */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-slate-600">
+                  Cantidad de Jabas
+                </Label>
+                <Input
+                  type="number"
+                  value={cantidadJabas}
+                  onChange={(e) => setCantidadJabas(e.target.value)}
+                  placeholder="Ej. 50"
+                  required
+                  min="1"
+                  className="h-10"
+                />
+              </div>
+
+              {/* Peso Total */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-slate-600">
+                  Peso Total (Kg)
+                </Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={pesoTotal}
+                  onChange={(e) => setPesoTotal(e.target.value)}
+                  placeholder="Ej. 1150.5"
+                  required
+                  min="0"
+                  className="h-10"
+                />
+              </div>
+
+              {/* Precio por Kg */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-slate-600">
+                  Precio por Kg (S/)
+                </Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={precioKg}
+                  onChange={(e) => setPrecioKg(e.target.value)}
+                  placeholder="Ej. 6.20"
+                  required
+                  min="0"
+                  className="h-10"
+                />
+              </div>
+            </div>
+
+            {/* Notas */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase text-slate-600">
+                Observaciones / Proveedor
+              </Label>
+              <Input
+                value={notas}
+                onChange={(e) => setNotas(e.target.value)}
+                placeholder="Nombre del proveedor, placa del camión o detalles..."
+                className="h-10 w-full"
+              />
+            </div>
+
+            {/* Live Calculation Box */}
+            <div className="p-3 sm:p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 mt-4">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-amber-900 uppercase tracking-wider">
+                  Costo Total de Inversión
+                </p>
+                <p className="text-xs text-amber-700 break-words">
+                  {pesoTotal || 0} kg &times; S/
+                  {Number(precioKg || 0).toFixed(2)}/kg
+                  {costoPorJabaCalculado > 0 && (
+                    <span className="font-semibold block sm:inline sm:ml-2">
+                      (~S/{costoPorJabaCalculado.toFixed(2)} por jaba)
+                    </span>
+                  )}
+                </p>
+              </div>
+              <p className="text-xl sm:text-2xl font-black text-amber-950 break-words">
+                {formatCurrency(costoTotalCalculado)}
+              </p>
+            </div>
+
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 pt-4 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setModalCompraOpen(false)}
+                className="w-full sm:w-auto"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600"
+              >
+                Confirmar y Guardar Compra
+              </Button>
+            </div>
+          </form>
+        </DialogModal>
       </div>
     </AppLayout>
   );
