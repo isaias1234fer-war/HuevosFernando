@@ -22,6 +22,10 @@ import {
   Scale,
   DollarSign,
   Package,
+  Egg,
+  Clock,
+  Sparkles,
+  AlertCircle,
 } from "lucide-react";
 
 export default function ComprasPage() {
@@ -36,6 +40,9 @@ export default function ComprasPage() {
   const [cantidadJabas, setCantidadJabas] = useState("");
   const [pesoTotal, setPesoTotal] = useState("");
   const [precioKg, setPrecioKg] = useState("");
+  const [fletePorJaba, setFletePorJaba] = useState("");
+  const [fechaCompra, setFechaCompra] = useState(new Date().toISOString().split("T")[0]);
+  const [fechaPostura, setFechaPostura] = useState(new Date().toISOString().split("T")[0]);
   const [notas, setNotas] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -75,6 +82,7 @@ export default function ComprasPage() {
   }, [fetchCalidades, fetchCompras]);
 
   const costoTotalCalculado = Number(pesoTotal) * Number(precioKg) || 0;
+  const fleteTotalCalculado = Number(fletePorJaba) * Number(cantidadJabas) || 0;
   const costoPorJabaCalculado = Number(cantidadJabas) > 0 ? costoTotalCalculado / Number(cantidadJabas) : 0;
 
   const handleDelete = async (id: number) => {
@@ -95,10 +103,13 @@ export default function ComprasPage() {
     e.preventDefault();
     try {
       await api.createCompra({
+        fecha: fechaCompra ? new Date(fechaCompra).toISOString() : new Date().toISOString(),
+        fecha_postura: fechaPostura ? new Date(fechaPostura).toISOString() : undefined,
         calidad_id: parseInt(calidadId),
         cantidad_jabas: parseInt(cantidadJabas),
         peso_total_kg: pesoTotal,
         precio_por_kg: precioKg,
+        flete_por_jaba: fletePorJaba,
         notas,
       });
       setModalCompraOpen(false);
@@ -106,8 +117,11 @@ export default function ComprasPage() {
       setCantidadJabas("");
       setPesoTotal("");
       setPrecioKg("");
+      setFletePorJaba("");
       setNotas("");
-      success("¡Compra registrada y añadida a inventario!");
+      setFechaCompra(new Date().toISOString().split("T")[0]);
+      setFechaPostura(new Date().toISOString().split("T")[0]);
+      success("¡Compra registrada! Los datos de vencimiento ya están en el Dashboard.");
       fetchCompras();
     } catch (err: any) {
       error(err.message || "Error al registrar la compra");
@@ -236,12 +250,14 @@ export default function ComprasPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Lote #</TableHead>
-                  <TableHead>Fecha</TableHead>
+                  <TableHead>F. Compra</TableHead>
+                  <TableHead>F. Postura</TableHead>
                   <TableHead>Calidad</TableHead>
                   <TableHead>Jabas</TableHead>
                   <TableHead>Peso Total</TableHead>
                   <TableHead>Precio / Kg</TableHead>
                   <TableHead>Costo Total</TableHead>
+                  <TableHead>Vencimiento Promedio</TableHead>
                   <TableHead>Notas</TableHead>
                   <TableHead className="w-16 text-right pr-4">Acción</TableHead>
                 </TableRow>
@@ -249,51 +265,95 @@ export default function ComprasPage() {
               <TableBody>
                 {compras.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-slate-400">
+                    <TableCell colSpan={11} className="text-center py-12 text-slate-400">
                       <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
                       <p className="font-semibold text-slate-600">No hay compras registradas</p>
                       <p className="text-xs mt-1">Haga clic en &quot;Registrar Compra&quot; para ingresar un nuevo lote.</p>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  compras.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-mono text-xs font-bold text-slate-500">
-                        #{c.id}
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-600 whitespace-nowrap">
-                        {formatDate(c.fecha)}
-                      </TableCell>
-                      <TableCell className="font-bold text-slate-900">
-                        {c.calidad?.nombre}
-                      </TableCell>
-                      <TableCell className="font-semibold text-slate-800">
-                        {c.cantidad_jabas} jabas
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-700">
-                        {Number(c.peso_total_kg).toFixed(2)} kg
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-700">
-                        {formatCurrency(Number(c.precio_por_kg))} / kg
-                      </TableCell>
-                      <TableCell className="font-extrabold text-amber-800">
-                        {formatCurrency(Number(c.costo_total))}
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-500 max-w-xs truncate">
-                        {c.notas || "-"}
-                      </TableCell>
-                      <TableCell className="text-right pr-4">
-                        <button
-                          onClick={() => handleDelete(c.id)}
-                          disabled={deletingId === c.id}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                          title="Eliminar compra"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  compras.map((c) => {
+                    const isPrimera = c.calidad?.nombre?.toLowerCase().includes("primera");
+                    const isCuarta = c.calidad?.nombre?.toLowerCase().includes("cuarta") || c.calidad?.nombre?.toLowerCase().includes("manchado");
+                    const diasMin = c.calidad?.dias_conservacion_min || (isPrimera ? 30 : isCuarta ? 21 : 30);
+                    const diasMax = c.calidad?.dias_conservacion_max || (isPrimera ? 30 : isCuarta ? 30 : 30);
+
+                    const fechaBase = c.fecha_postura ? new Date(c.fecha_postura) : new Date(c.fecha);
+                    const fechaVenMin = new Date(fechaBase);
+                    fechaVenMin.setDate(fechaVenMin.getDate() + diasMin);
+                    const fechaVenMax = new Date(fechaBase);
+                    fechaVenMax.setDate(fechaVenMax.getDate() + diasMax);
+
+                    const hoy = new Date();
+                    const diasRestantesMin = Math.ceil((fechaVenMin.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+                    const diasRestantesMax = Math.ceil((fechaVenMax.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+
+                    return (
+                      <TableRow key={c.id}>
+                        <TableCell className="font-mono text-xs font-bold text-slate-500">
+                          #{c.id}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-600 whitespace-nowrap">
+                          {formatDate(c.fecha)}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-600 whitespace-nowrap font-medium">
+                          {c.fecha_postura ? formatDate(c.fecha_postura) : formatDate(c.fecha)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-slate-900">{c.calidad?.nombre}</span>
+                            {isPrimera && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                                30d
+                              </span>
+                            )}
+                            {isCuarta && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-800">
+                                21-30d
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-semibold text-slate-800">
+                          {c.cantidad_jabas} jabas
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-700">
+                          {Number(c.peso_total_kg).toFixed(2)} kg
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-700">
+                          {formatCurrency(Number(c.precio_por_kg))} / kg
+                        </TableCell>
+                        <TableCell className="font-extrabold text-amber-800">
+                          {formatCurrency(Number(c.costo_total))}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs space-y-0.5">
+                            <p className="font-semibold text-slate-800">
+                              {diasMin === diasMax
+                                ? `${diasRestantesMin} días restantes`
+                                : `${diasRestantesMin} a ${diasRestantesMax} días`}
+                            </p>
+                            <p className="text-[10px] text-slate-500">
+                              Vence: {formatDate(fechaVenMax.toISOString())}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-500 max-w-xs truncate">
+                          {c.notas || "-"}
+                        </TableCell>
+                        <TableCell className="text-right pr-4">
+                          <button
+                            onClick={() => handleDelete(c.id)}
+                            disabled={deletingId === c.id}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="Eliminar compra"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -304,14 +364,14 @@ export default function ComprasPage() {
         <DialogModal
           isOpen={modalCompraOpen}
           onClose={() => setModalCompraOpen(false)}
-          title="Registrar Nueva Compra"
-          description="Ingrese los datos del proveedor y pesaje para crear el lote"
+          title="Registrar Nueva Compra de Huevos"
+          description="Ingrese los datos del lote, fecha de postura y costos para control de vencimiento"
           maxWidth="2xl"
         >
           <form onSubmit={handleCreateCompra} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {/* Calidad Selector */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 sm:col-span-2">
                 <Label className="text-xs font-bold uppercase text-slate-600">
                   Calidad de Huevo
                 </Label>
@@ -320,11 +380,50 @@ export default function ComprasPage() {
                   onChange={(e) => setCalidadId(e.target.value)}
                   options={calidades.map((c) => ({
                     value: String(c.id),
-                    label: c.nombre,
+                    label: `${c.nombre} (${
+                      c.nombre.toLowerCase().includes("primera")
+                        ? "30 días de conservación"
+                        : c.nombre.toLowerCase().includes("cuarta") || c.nombre.toLowerCase().includes("manchado")
+                        ? "21 a 30 días de conservación"
+                        : "Conservación estándar"
+                    })`,
                   }))}
-                  placeholder="Seleccionar calidad"
+                  placeholder="Seleccionar calidad de huevo"
                   required
                 />
+              </div>
+
+              {/* Fecha de Compra */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-slate-600 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                  Fecha de Compra / Ingreso
+                </Label>
+                <Input
+                  type="date"
+                  value={fechaCompra}
+                  onChange={(e) => setFechaCompra(e.target.value)}
+                  required
+                  className="h-10"
+                />
+              </div>
+
+              {/* Fecha de Postura */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-slate-600 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  Fecha de Postura (Recolección)
+                </Label>
+                <Input
+                  type="date"
+                  value={fechaPostura}
+                  onChange={(e) => setFechaPostura(e.target.value)}
+                  required
+                  className="h-10"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Día en que las gallinas pusieron los huevos.
+                </p>
               </div>
 
               {/* Cantidad Jabas */}
@@ -373,7 +472,55 @@ export default function ComprasPage() {
                   min="0"
                 />
               </div>
+
+              {/* Flete por Jaba */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-slate-600">
+                  Flete por Jaba (S/)
+                </Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={fletePorJaba}
+                  onChange={(e) => setFletePorJaba(e.target.value)}
+                  placeholder="Ej. 3.50"
+                  min="0"
+                />
+              </div>
             </div>
+
+            {/* Banner Informativo de Caducidad según calidad */}
+            {calidadId && (
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-start gap-3 animate-fade-in text-xs">
+                <div className="p-2 rounded-lg bg-amber-500 text-white shrink-0 mt-0.5">
+                  <Egg className="w-4 h-4" />
+                </div>
+                <div className="space-y-1 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800">
+                      Regla de Vencimiento:
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                      Cálculo Automático
+                    </span>
+                  </div>
+                  {calidades.find((c) => String(c.id) === String(calidadId))?.nombre.toLowerCase().includes("primera") ? (
+                    <p className="text-slate-600">
+                      🌟 <strong>Huevo de primera calidad:</strong> 30 días desde la postura. Se contará de forma regresiva en el Dashboard para garantizar máxima frescura.
+                    </p>
+                  ) : calidades.find((c) => String(c.id) === String(calidadId))?.nombre.toLowerCase().includes("cuarta") ||
+                    calidades.find((c) => String(c.id) === String(calidadId))?.nombre.toLowerCase().includes("manchado") ? (
+                    <p className="text-slate-600">
+                      🥚 <strong>Huevo manchado (cuarta calidad):</strong> 21–30 días desde la postura. Tendrá semáforo de aviso preventivo en el Dashboard.
+                    </p>
+                  ) : (
+                    <p className="text-slate-600">
+                      Conservación estimada según configuración de la calidad.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Notas */}
             <div className="space-y-1.5">
@@ -383,7 +530,7 @@ export default function ComprasPage() {
               <Input
                 value={notas}
                 onChange={(e) => setNotas(e.target.value)}
-                placeholder="Nombre del proveedor, placa del camión o detalles..."
+                placeholder="Nombre del productor avícola, lote del camión o notas..."
               />
             </div>
 
@@ -398,6 +545,11 @@ export default function ComprasPage() {
                   {costoPorJabaCalculado > 0 && (
                     <span className="font-semibold block sm:inline sm:ml-2">
                       (~S/{costoPorJabaCalculado.toFixed(2)} por jaba)
+                    </span>
+                  )}
+                  {fleteTotalCalculado > 0 && (
+                    <span className="font-semibold block sm:inline sm:ml-2 text-rose-700">
+                      + Flete: {formatCurrency(fleteTotalCalculado)}
                     </span>
                   )}
                 </p>

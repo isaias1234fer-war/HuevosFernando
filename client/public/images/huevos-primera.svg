@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#022c22" />
+    </linearGradient>
+    <linearGradient id="eggGold1" x1="20%" y1="10%" x2="80%" y2="90%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="25%" stop-color="#f59e0b" />
+      <stop offset="70%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+    <linearGradient id="eggGold2" x1="15%" y1="15%" x2="85%" y2="85%">
+      <stop offset="0%" stop-color="#fed7aa" />
+      <stop offset="35%" stop-color="#fb923c" />
+      <stop offset="75%" stop-color="#ea580c" />
+      <stop offset="100%" stop-color="#c2410c" />
+    </linearGradient>
+    <linearGradient id="eggHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8" />
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="trayGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#10b981" stop-opacity="0" />
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="600" fill="url(#bgGrad)" />
+  <circle cx="400" cy="320" r="280" fill="url(#glow)" />
+
+  <!-- Subtle grid pattern -->
+  <g opacity="0.05" stroke="#ffffff" stroke-width="1">
+    <line x1="100" y1="0" x2="100" y2="600" />
+    <line x1="200" y1="0" x2="200" y2="600" />
+    <line x1="300" y1="0" x2="300" y2="600" />
+    <line x1="400" y1="0" x2="400" y2="600" />
+    <line x1="500" y1="0" x2="500" y2="600" />
+    <line x1="600" y1="0" x2="600" y2="600" />
+    <line x1="700" y1="0" x2="700" y2="600" />
+  </g>
+
+  <!-- Wooden/Artisanal Display Tray Base -->
+  <g filter="url(#shadow)">
+    <ellipse cx="400" cy="440" rx="280" ry="70" fill="#0f172a" opacity="0.6" />
+    <path d="M 160 410 C 160 410, 400 440, 640 410 L 620 460 C 620 460, 400 490, 180 460 Z" fill="url(#trayGrad)" stroke="#475569" stroke-width="2" />
+    <ellipse cx="400" cy="410" rx="240" ry="50" fill="#1e293b" stroke="#334155" stroke-width="2" />
+  </g>
+
+  <!-- Eggs Group (Clean, symmetrical, premium presentation) -->
+  <g filter="url(#shadow)">
+    <!-- Back Left Egg -->
+    <g transform="translate(290, 220) rotate(-12)">
+      <ellipse cx="0" cy="70" rx="55" ry="75" fill="url(#eggGold2)" />
+      <path d="M -50 80 Q -30 -10 0 -25 Q 30 -10 50 80 Z" fill="url(#eggGold2)" />
+      <ellipse cx="-15" cy="40" rx="20" ry="40" fill="url(#eggHighlight)" transform="rotate(-15 -15 40)" />
+    </g>
+
+    <!-- Back Right Egg -->
+    <g transform="translate(510, 220) rotate(12)">
+      <ellipse cx="0" cy="70" rx="55" ry="75" fill="url(#eggGold2)" />
+      <path d="M -50 80 Q -30 -10 0 -25 Q 30 -10 50 80 Z" fill="url(#eggGold2)" />
+      <ellipse cx="-15" cy="40" rx="20" ry="40" fill="url(#eggHighlight)" transform="rotate(-15 -15 40)" />
+    </g>
+
+    <!-- Center Hero Egg (Flawless, Glossy) -->
+    <g transform="translate(400, 170)">
+      <ellipse cx="0" cy="110" rx="85" ry="115" fill="url(#eggGold1)" />
+      <path d="M -80 120 Q -45 -15 0 -45 Q 45 -15 80 120 Z" fill="url(#eggGold1)" />
+      <!-- Specular shine -->
+      <ellipse cx="-28" cy="65" rx="35" ry="70" fill="url(#eggHighlight)" transform="rotate(-18 -28 65)" />
+      <circle cx="35" cy="130" r="12" fill="#ffffff" opacity="0.15" />
+    </g>
+
+    <!-- Front Left Egg -->
+    <g transform="translate(260, 310) rotate(-20)">
+      <ellipse cx="0" cy="60" rx="50" ry="68" fill="url(#eggGold1)" />
+      <path d="M -46 65 Q -25 -5 0 -20 Q 25 -5 46 65 Z" fill="url(#eggGold1)" />
+      <ellipse cx="-15" cy="35" rx="18" ry="35" fill="url(#eggHighlight)" transform="rotate(-15 -15 35)" />
+    </g>
+
+    <!-- Front Right Egg -->
+    <g transform="translate(540, 310) rotate(20)">
+      <ellipse cx="0" cy="60" rx="50" ry="68" fill="url(#eggGold1)" />
+      <path d="M -46 65 Q -25 -5 0 -20 Q 25 -5 46 65 Z" fill="url(#eggGold1)" />
+      <ellipse cx="-15" cy="35" rx="18" ry="35" fill="url(#eggHighlight)" transform="rotate(-15 -15 35)" />
+    </g>
+  </g>
+
+  <!-- Premium Quality Badge -->
+  <g transform="translate(400, 520)" filter="url(#shadow)">
+    <rect x="-180" y="-24" width="360" height="48" rx="24" fill="#064e3b" stroke="#10b981" stroke-width="2" />
+    <circle cx="-145" cy="0" r="14" fill="#10b981" />
+    <path d="M -150 -1 L -146 4 L -139 -4" stroke="#ffffff" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="15" y="6" fill="#ecfdf5" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="800" letter-spacing="1.5" text-anchor="middle">
+      1RA CALIDAD • GRADO EXTRA
+    </text>
+  </g>
+
+  <!-- Sparkles -->
+  <g fill="#34d399">
+    <path d="M 230 160 Q 240 160 240 150 Q 240 160 250 160 Q 240 160 240 170 Q 240 160 230 160 Z" />
+    <path d="M 570 140 Q 580 140 580 130 Q 580 140 590 140 Q 580 140 580 150 Q 580 140 570 140 Z" />
+    <path d="M 400 80 Q 408 80 408 72 Q 408 80 416 80 Q 408 80 408 88 Q 408 80 400 80 Z" />
+  </g>
+</svg>

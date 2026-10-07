@@ -6,22 +6,26 @@ export const comprasRouter = Router();
 
 comprasRouter.post('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { fecha, calidad_id, cantidad_jabas, peso_total_kg, precio_por_kg, notas } = req.body;
+    const { fecha, fecha_postura, calidad_id, cantidad_jabas, peso_total_kg, precio_por_kg, flete_por_jaba, notas } = req.body;
 
     if (!calidad_id || !cantidad_jabas || !peso_total_kg || !precio_por_kg) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
 
     const costo_total = Number(peso_total_kg) * Number(precio_por_kg);
+    const fechaCompra = fecha ? new Date(fecha) : new Date();
+    const fechaPosturaFinal = fecha_postura ? new Date(fecha_postura) : fechaCompra;
 
     const compra = await prisma.compra.create({
       data: {
-        fecha: fecha ? new Date(fecha) : new Date(),
-        calidad_id,
+        fecha: fechaCompra,
+        fecha_postura: fechaPosturaFinal,
+        calidad_id: parseInt(calidad_id),
         cantidad_jabas: parseInt(cantidad_jabas),
         peso_total_kg,
         precio_por_kg,
         costo_total,
+        flete_por_jaba: flete_por_jaba || 0,
         notas,
       },
       include: { calidad: true },

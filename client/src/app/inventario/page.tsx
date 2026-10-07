@@ -42,6 +42,7 @@ export default function ComprasPage() {
   const [cantidadJabas, setCantidadJabas] = useState("");
   const [pesoTotal, setPesoTotal] = useState("");
   const [precioKg, setPrecioKg] = useState("");
+  const [fletePorJaba, setFletePorJaba] = useState("");
   const [notas, setNotas] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -81,6 +82,7 @@ export default function ComprasPage() {
   }, [fetchCalidades, fetchCompras]);
 
   const costoTotalCalculado = Number(pesoTotal) * Number(precioKg) || 0;
+  const fleteTotalCalculado = Number(fletePorJaba) * Number(cantidadJabas) || 0;
   const costoPorJabaCalculado =
     Number(cantidadJabas) > 0 ? costoTotalCalculado / Number(cantidadJabas) : 0;
 
@@ -111,6 +113,7 @@ export default function ComprasPage() {
         cantidad_jabas: parseInt(cantidadJabas),
         peso_total_kg: pesoTotal,
         precio_por_kg: precioKg,
+        flete_por_jaba: fletePorJaba,
         notas,
       });
       setModalCompraOpen(false);
@@ -118,6 +121,7 @@ export default function ComprasPage() {
       setCantidadJabas("");
       setPesoTotal("");
       setPrecioKg("");
+      setFletePorJaba("");
       setNotas("");
       success("¡Compra registrada y añadida a inventario!");
       fetchCompras();
@@ -430,6 +434,22 @@ export default function ComprasPage() {
                   className="h-10"
                 />
               </div>
+
+              {/* Flete por Jaba */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-slate-600">
+                  Flete por Jaba (S/)
+                </Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={fletePorJaba}
+                  onChange={(e) => setFletePorJaba(e.target.value)}
+                  placeholder="Ej. 3.50 (2-5 soles según carro)"
+                  min="0"
+                  className="h-10"
+                />
+              </div>
             </div>
 
             {/* Notas */}
@@ -457,6 +477,11 @@ export default function ComprasPage() {
                   {costoPorJabaCalculado > 0 && (
                     <span className="font-semibold block sm:inline sm:ml-2">
                       (~S/{costoPorJabaCalculado.toFixed(2)} por jaba)
+                    </span>
+                  )}
+                  {fleteTotalCalculado > 0 && (
+                    <span className="font-semibold block sm:inline sm:ml-2 text-rose-700">
+                      + Flete: {formatCurrency(fleteTotalCalculado)}
                     </span>
                   )}
                 </p>

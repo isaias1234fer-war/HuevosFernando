@@ -17,6 +17,7 @@ import {
   X,
   Egg,
   ShieldCheck,
+  ShoppingBag,
 } from "lucide-react";
 
 interface NavGroup {
@@ -39,6 +40,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Operaciones",
     items: [
+      { href: "/pedidos", label: "Pedidos Clientes", icon: ShoppingBag },
       { href: "/ventas", label: "Ventas", icon: TrendingUp },
       { href: "/compras", label: "Compras", icon: ShoppingCart },
       { href: "/limpieza", label: "Limpieza & Merma", icon: Sparkles },
@@ -86,7 +88,7 @@ export function Sidebar({ mobileOpen = false, onCloseMobile }: SidebarProps) {
             </div>
             <div>
               <span className="font-extrabold text-slate-900 tracking-tight text-base block leading-none">
-                Huevos Fernando
+                Huevos Don Lucho
               </span>
               <span className="text-[11px] font-medium text-emerald-600 tracking-wider uppercase block mt-1">
                 Gestión Avícola

@@ -25,6 +25,20 @@ export const api = {
       body: JSON.stringify({ username, password }),
     }),
 
+  register: (data: {
+    nombre: string;
+    email: string;
+    password: string;
+    telefono?: string;
+    direccion?: string;
+  }) =>
+    fetchAPI("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getMe: () => fetchAPI("/api/auth/me"),
+
   logout: () =>
     fetchAPI("/api/auth/logout", { method: "POST" }),
 
@@ -89,8 +103,36 @@ export const api = {
 
   getInventario: () => fetchAPI("/api/inventario"),
 
+  getCatalogo: () => fetchAPI("/api/inventario/catalogo"),
+
   getLotes: () => fetchAPI("/api/inventario/lotes"),
+
+  getVencimientos: () => fetchAPI("/api/inventario/vencimientos"),
 
   getResumen: (params?: string) =>
     fetchAPI(`/api/reportes/resumen${params ? `?${params}` : ""}`),
+
+  createPedido: (data: {
+    hora_entrega: string;
+    direccion_entrega: string;
+    telefono_contacto?: string;
+    notas?: string;
+    items: {
+      calidad_id: number;
+      unidad_medida: string;
+      cantidad_unidades: number;
+    }[];
+  }) =>
+    fetchAPI("/api/pedidos", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getPedidos: () => fetchAPI("/api/pedidos"),
+
+  updatePedidoEstado: (id: number, estado: string) =>
+    fetchAPI(`/api/pedidos/${id}/estado`, {
+      method: "PATCH",
+      body: JSON.stringify({ estado }),
+    }),
 };

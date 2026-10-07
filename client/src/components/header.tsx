@@ -47,7 +47,7 @@ export function Header({ onToggleMobileSidebar }: HeaderProps) {
     setCurrentDateStr(formatter.format(now));
   }, []);
 
-  const currentPage = pageTitles[pathname] || { title: "Huevos Fernando", category: "Sistema" };
+  const currentPage = pageTitles[pathname] || { title: "Huevos Don Lucho", category: "Sistema" };
 
   const handleLogout = async () => {
     try {
@@ -116,11 +116,11 @@ export function Header({ onToggleMobileSidebar }: HeaderProps) {
             className="flex items-center gap-2.5 p-1.5 sm:px-3 sm:py-1.5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-slate-100/80 transition-colors focus:outline-none"
           >
             <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-sm font-bold text-xs">
-              HF
+              HDL
             </div>
             <div className="hidden sm:block text-left text-xs">
               <p className="font-semibold text-slate-800 leading-tight">Admin</p>
-              <p className="text-[10px] text-emerald-600 font-medium">Huevos Fernando</p>
+              <p className="text-[10px] text-emerald-600 font-medium">Huevos Don Lucho</p>
             </div>
           </button>
 

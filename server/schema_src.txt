@@ -1,4 +1,4 @@
-generator client {
+﻿generator client {
   provider = "prisma-client-js"
 }
 
@@ -16,52 +16,11 @@ model Calidad {
   dias_conservacion_max Int?
   compras          Compra[]
   ventas           Venta[]
-  detalles_pedido  DetallePedido[]
-}
-
-model Usuario {
-  id               Int       @id @default(autoincrement())
-  nombre           String
-  email            String    @unique
-  telefono         String?
-  direccion        String?
-  password         String
-  rol              String    @default("cliente") // "admin" | "cliente"
-  creado_en        DateTime  @default(now())
-  pedidos          Pedido[]
-}
-
-model Pedido {
-  id                Int             @id @default(autoincrement())
-  usuario_id        Int
-  usuario           Usuario         @relation(fields: [usuario_id], references: [id])
-  fecha_pedido      DateTime        @default(now())
-  hora_entrega      DateTime
-  direccion_entrega String
-  telefono_contacto String?
-  notas             String?
-  estado            String          @default("pendiente") // "pendiente", "confirmado", "en_camino", "entregado", "cancelado"
-  total             Decimal         @db.Decimal(10, 2)
-  items             DetallePedido[]
-}
-
-model DetallePedido {
-  id                Int       @id @default(autoincrement())
-  pedido_id         Int
-  pedido            Pedido    @relation(fields: [pedido_id], references: [id], onDelete: Cascade)
-  calidad_id        Int
-  calidad           Calidad   @relation(fields: [calidad_id], references: [id])
-  unidad_medida     String    // "jabas", "paquetes", "celdas"
-  cantidad_unidades Decimal   @db.Decimal(10, 2)
-  cantidad_jabas    Decimal   @db.Decimal(10, 4)
-  precio_unitario   Decimal   @db.Decimal(10, 2)
-  subtotal          Decimal   @db.Decimal(10, 2)
 }
 
 model Compra {
   id              Int       @id @default(autoincrement())
   fecha           DateTime  @default(now())
-  fecha_postura   DateTime?
   calidad_id      Int
   calidad         Calidad   @relation(fields: [calidad_id], references: [id])
   cantidad_jabas  Int
@@ -117,3 +76,4 @@ model Configuracion {
   id             Int   @id @default(autoincrement())
   huevos_por_jaba Int  @default(30)
 }
+

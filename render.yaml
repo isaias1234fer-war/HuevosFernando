@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: huevos-fernando-api
+    name: huevos-don-lucho-api
     env: node
     buildCommand: cd server && npm install && npx prisma generate && npx prisma db push && npx prisma db seed && npm run build
     startCommand: cd server && npm start
@@ -12,7 +12,7 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_URL
-        value: https://huevos-fernando.vercel.app
+        value: https://huevos-don-lucho.vercel.app
       - key: OWNER_USERNAME
         sync: false
       - key: OWNER_PASSWORD

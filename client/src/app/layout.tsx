@@ -6,7 +6,7 @@ import { ToastProvider } from "@/components/ui/toast-notification";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Huevos Fernando - Sistema de Gestión Avícola",
+  title: "Huevos Don Lucho - Sistema de Gestión Avícola",
   description: "Sistema de gestión integral para negocio avícola de venta y distribución de huevos",
 };
 

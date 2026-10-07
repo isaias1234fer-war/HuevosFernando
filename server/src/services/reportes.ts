@@ -1,5 +1,6 @@
 import prisma from '../prisma';
 import { getCostoRealPorJaba } from './inventario';
+import { getResumenVencimientos } from './lotes';
 
 export async function getResumen(desde?: string, hasta?: string) {
   const dateFilter: any = {};
@@ -12,8 +13,9 @@ export async function getResumen(desde?: string, hasta?: string) {
   const ventas = await prisma.venta.findMany({ where, include: { calidad: true } });
 
   const inversionTotal = compras.reduce((sum, c) => sum + Number(c.costo_total), 0);
+  const fleteTotal = compras.reduce((sum, c) => sum + (Number(c.flete_por_jaba) * Number(c.cantidad_jabas)), 0);
   const ingresosTotales = ventas.reduce((sum, v) => sum + Number(v.total), 0);
-  const gananciaNeta = ingresosTotales - inversionTotal;
+  const gananciaNeta = ingresosTotales - inversionTotal - fleteTotal;
 
   let valorMerma = 0;
   for (const c of compras) {
@@ -67,13 +69,17 @@ export async function getResumen(desde?: string, hasta?: string) {
   });
   const cuentasPorCobrar = Number(ventasFiadoNoPagadas._sum.saldo_pendiente || 0);
 
+  const vencimientos = await getResumenVencimientos();
+
   return {
     inversion_total: Number(inversionTotal.toFixed(2)),
+    flete_total: Number(fleteTotal.toFixed(2)),
     ingresos_totales: Number(ingresosTotales.toFixed(2)),
     ingresos_cobrados: Number(ingresosCobrados.toFixed(2)),
     cuentas_por_cobrar: Number(cuentasPorCobrar.toFixed(2)),
     ganancia_neta: Number(gananciaNeta.toFixed(2)),
     valor_merma: Number(valorMerma.toFixed(2)),
     ganancia_por_calidad: gananciaPorCalidad,
+    vencimientos,
   };
 }
