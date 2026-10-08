@@ -355,8 +355,27 @@ export default function LimpiezaPage() {
           title="Registrar Merma de Limpieza"
           description="Puedes agregar múltiples jornadas de limpieza para el mismo lote manchado"
           maxWidth="lg"
+          onSubmit={handleSubmit}
+          footer={
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setModalOpen(false)}
+                className="w-full sm:w-auto min-h-[44px] h-11 text-sm font-semibold"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="w-full sm:w-auto min-h-[44px] h-11 text-sm font-semibold bg-teal-600 hover:bg-teal-700 text-white font-bold"
+              >
+                Guardar Jornada
+              </Button>
+            </>
+          }
         >
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4">
             {/* Lote selector */}
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase text-slate-600">
@@ -437,20 +456,7 @@ export default function LimpiezaPage() {
                 placeholder="Causa de rotura, estado del lote, día de limpieza..."
               />
             </div>
-
-            <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setModalOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" className="bg-teal-600 hover:bg-teal-700">
-                Guardar Jornada
-              </Button>
-            </div>
-          </form>
+          </div>
         </DialogModal>
       </div>
     </AppLayout>

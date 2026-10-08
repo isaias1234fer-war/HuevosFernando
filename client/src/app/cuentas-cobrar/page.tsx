@@ -292,8 +292,27 @@ export default function CuentasCobrarPage() {
               Number(abonoVenta.saldo_pendiente)
             )}${abonoGrupo && abonoGrupo.length > 1 ? ` (${abonoGrupo.length} productos)` : ''}`}
             maxWidth="lg"
+            onSubmit={handleAbono}
+            footer={
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { setAbonoVenta(null); setAbonoGrupo(null); }}
+                  className="w-full sm:w-auto min-h-[44px] h-11 text-sm font-semibold"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  className="w-full sm:w-auto min-h-[44px] h-11 text-sm font-semibold"
+                >
+                  Confirmar Cobro
+                </Button>
+              </>
+            }
           >
-            <form onSubmit={handleAbono} className="space-y-4">
+            <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-slate-600">
                   Monto a Cobrar (S/)
@@ -332,18 +351,7 @@ export default function CuentasCobrarPage() {
                   placeholder="Ej. Yape, Efectivo en caja..."
                 />
               </div>
-
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setAbonoVenta(null)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit">Confirmar Cobro</Button>
-              </div>
-            </form>
+            </div>
           </DialogModal>
         )}
       </div>

@@ -367,8 +367,27 @@ export default function ComprasPage() {
           title="Registrar Nueva Compra de Huevos"
           description="Ingrese los datos del lote, fecha de postura y costos para control de vencimiento"
           maxWidth="2xl"
+          onSubmit={handleCreateCompra}
+          footer={
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setModalCompraOpen(false)}
+                className="w-full sm:w-auto min-h-[44px] h-11 text-sm font-semibold"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="w-full sm:w-auto min-h-[44px] h-11 text-sm font-semibold bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold"
+              >
+                Confirmar y Guardar Compra
+              </Button>
+            </>
+          }
         >
-          <form onSubmit={handleCreateCompra} className="space-y-4">
+          <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {/* Calidad Selector */}
               <div className="space-y-1.5 sm:col-span-2">
@@ -559,19 +578,7 @@ export default function ComprasPage() {
               </p>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setModalCompraOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" className="bg-amber-500 hover:bg-amber-600">
-                Confirmar y Guardar Compra
-              </Button>
-            </div>
-          </form>
+          </div>
         </DialogModal>
       </div>
     </AppLayout>

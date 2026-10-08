@@ -117,7 +117,6 @@ export default function TiendaPage() {
     loadData();
   }, []);
 
-  // Update calculated time whenever timeOffsetMinutes changes or every minute
   useEffect(() => {
     function updateScheduledTime() {
       const target = new Date(Date.now() + timeOffsetMinutes * 60 * 1000);
@@ -127,6 +126,17 @@ export default function TiendaPage() {
     const interval = setInterval(updateScheduledTime, 30000);
     return () => clearInterval(interval);
   }, [timeOffsetMinutes]);
+
+  // Lock body scroll when drawer or modals are open
+  useEffect(() => {
+    if (isCheckoutOpen || cartOpen || !!successOrder) {
+      const orig = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = orig;
+      };
+    }
+  }, [isCheckoutOpen, cartOpen, successOrder]);
 
   // Handle unit change for a card
   const handleUnitChange = (productId: number, unit: "celdas" | "paquetes" | "jabas") => {
@@ -748,167 +758,180 @@ export default function TiendaPage() {
 
       {/* Checkout Modal with Strict Time Window and Delivery Form */}
       {isCheckoutOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
           <div
             className="fixed inset-0 bg-slate-950/80 backdrop-blur-md animate-fade-in"
             onClick={() => !submittingOrder && setIsCheckoutOpen(false)}
           />
 
-          <div className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 max-h-[90vh] overflow-y-auto space-y-6 animate-scale-in">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div 
+            className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl z-10 flex flex-col overflow-hidden animate-scale-in max-h-[calc(100vh-2rem)] max-h-[calc(100dvh-2rem)] w-[calc(100%-0.75rem)] sm:w-full"
+            style={{ maxHeight: "calc(100dvh - 2rem)" }}
+          >
+            {/* Header - Fijo arriba */}
+            <div className="flex items-center justify-between border-b border-slate-800 p-4 sm:p-5 flex-shrink-0 bg-slate-900">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-extrabold text-white">Confirmar Entrega y Horario</h3>
+                  <h3 className="text-lg sm:text-xl font-extrabold text-white">Confirmar Entrega y Horario</h3>
                   <p className="text-xs text-slate-400">Regla estricta: Despacho entre 30 y 90 minutos</p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsCheckoutOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800"
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 min-w-[44px] min-h-[44px] flex items-center justify-center"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {checkoutError && (
-              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-rose-950/50 border border-rose-800 text-rose-300 text-sm">
-                <AlertCircle className="w-5 h-5 shrink-0 text-rose-400 mt-0.5" />
-                <span>{checkoutError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleConfirmOrder} className="space-y-5">
-              {/* Delivery Address */}
-              <div className="space-y-1.5">
-                <Label htmlFor="checkout-dir" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Dirección de Entrega *
-                </Label>
-                <div className="relative">
-                  <MapPin className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
-                  <Input
-                    id="checkout-dir"
-                    value={direccionEntrega}
-                    onChange={(e) => setDireccionEntrega(e.target.value)}
-                    placeholder="Ej. Calle Los Tulipanes 456, Urb. Santa Anita"
-                    className="pl-10 bg-slate-950 border-slate-800 text-white"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Phone */}
-              <div className="space-y-1.5">
-                <Label htmlFor="checkout-tel" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Teléfono / WhatsApp de Contacto
-                </Label>
-                <div className="relative">
-                  <Phone className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
-                  <Input
-                    id="checkout-tel"
-                    value={telefonoContacto}
-                    onChange={(e) => setTelefonoContacto(e.target.value)}
-                    placeholder="987 654 321"
-                    className="pl-10 bg-slate-950 border-slate-800 text-white"
-                  />
-                </div>
-              </div>
-
-              {/* Delivery Time Selector (STRICT RULE: 30 to 90 minutes) */}
-              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400">
-                    <Clock className="w-4 h-4" />
-                    <span>Programación de Hora de Entrega (Obligatorio)</span>
+            <form onSubmit={handleConfirmOrder} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              {/* Body - Único elemento con scroll interno */}
+              <div className="overflow-y-auto flex-1 min-h-0 p-4 sm:p-6 space-y-5 overscroll-contain">
+                {checkoutError && (
+                  <div className="flex items-start gap-3 p-3.5 rounded-xl bg-rose-950/50 border border-rose-800 text-rose-300 text-sm">
+                    <AlertCircle className="w-5 h-5 shrink-0 text-rose-400 mt-0.5" />
+                    <span>{checkoutError}</span>
                   </div>
-                  <span className="text-[11px] text-slate-400">Ventana: 30 a 90 min</span>
-                </div>
-
-                <p className="text-xs text-slate-300">
-                  Por norma operativa, el repartidor requiere un mínimo de <strong>30 minutos</strong> para alistar su pedido y un máximo de <strong>90 minutos</strong>.
-                </p>
-
-                {/* Quick Preset Buttons */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                  {quickTimePresets.map((preset) => (
-                    <button
-                      key={preset.minutes}
-                      type="button"
-                      onClick={() => {
-                        setTimeOffsetMinutes(preset.minutes);
-                        setCheckoutError("");
-                      }}
-                      className={`py-2 px-2.5 rounded-xl text-xs font-semibold border transition-all ${
-                        timeOffsetMinutes === preset.minutes
-                          ? "bg-emerald-600/30 border-emerald-500 text-emerald-300 shadow-sm"
-                          : "bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200"
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Custom Time Display & Visual Status */}
-                <div className="pt-2">
-                  {deliveryTimeValidation.valid ? (
-                    <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-xs">
-                      <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                      <span>
-                        Hora de entrega programada: <strong>{deliveryTimeValidation.formattedTime}</strong> (en aprox. {deliveryTimeValidation.diffMinutes} minutos)
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs">
-                      <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                      <span>{deliveryTimeValidation.message}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Order Notes */}
-              <div className="space-y-1.5">
-                <Label htmlFor="checkout-notas" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Instrucciones o Referencias de Entrega
-                </Label>
-                <Input
-                  id="checkout-notas"
-                  value={notasPedido}
-                  onChange={(e) => setNotasPedido(e.target.value)}
-                  placeholder="Ej. Casa de rejas blancas, timbre 2, llamar al llegar"
-                  className="bg-slate-950 border-slate-800 text-white"
-                />
-              </div>
-
-              {/* Summary Box */}
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between text-sm">
-                <div>
-                  <span className="text-slate-400 block text-xs">Total del Pedido:</span>
-                  <span className="text-xs text-slate-500">{totalCartItemsCount} unidades de huevos</span>
-                </div>
-                <span className="text-2xl font-black text-amber-400">
-                  S/. {totalCartAmount.toFixed(2)}
-                </span>
-              </div>
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={submittingOrder || !deliveryTimeValidation.valid}
-                className="w-full h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base shadow-lg shadow-emerald-900/30 gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submittingOrder ? (
-                  <span>Procesando y Notificando al Administrador...</span>
-                ) : (
-                  <>
-                    <span>Confirmar Pedido Ahora</span>
-                    <CheckCircle2 className="w-5 h-5" />
-                  </>
                 )}
-              </Button>
+
+                {/* Delivery Address */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="checkout-dir" className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Dirección de Entrega *
+                  </Label>
+                  <div className="relative">
+                    <MapPin className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
+                    <Input
+                      id="checkout-dir"
+                      value={direccionEntrega}
+                      onChange={(e) => setDireccionEntrega(e.target.value)}
+                      placeholder="Ej. Calle Los Tulipanes 456, Urb. Santa Anita"
+                      className="pl-10 bg-slate-950 border-slate-800 text-white"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="checkout-tel" className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Teléfono / WhatsApp de Contacto
+                  </Label>
+                  <div className="relative">
+                    <Phone className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
+                    <Input
+                      id="checkout-tel"
+                      value={telefonoContacto}
+                      onChange={(e) => setTelefonoContacto(e.target.value)}
+                      placeholder="987 654 321"
+                      className="pl-10 bg-slate-950 border-slate-800 text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Delivery Time Selector (STRICT RULE: 30 to 90 minutes) */}
+                <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400">
+                      <Clock className="w-4 h-4" />
+                      <span>Programación de Hora de Entrega (Obligatorio)</span>
+                    </div>
+                    <span className="text-[11px] text-slate-400">Ventana: 30 a 90 min</span>
+                  </div>
+
+                  <p className="text-xs text-slate-300">
+                    Por norma operativa, el repartidor requiere un mínimo de <strong>30 minutos</strong> para alistar su pedido y un máximo de <strong>90 minutos</strong>.
+                  </p>
+
+                  {/* Quick Preset Buttons */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    {quickTimePresets.map((preset) => (
+                      <button
+                        key={preset.minutes}
+                        type="button"
+                        onClick={() => {
+                          setTimeOffsetMinutes(preset.minutes);
+                          setCheckoutError("");
+                        }}
+                        className={`py-2 px-2.5 rounded-xl text-xs font-semibold border transition-all min-h-[44px] ${
+                          timeOffsetMinutes === preset.minutes
+                            ? "bg-emerald-600/30 border-emerald-500 text-emerald-300 shadow-sm"
+                            : "bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom Time Display & Visual Status */}
+                  <div className="pt-2">
+                    {deliveryTimeValidation.valid ? (
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 text-xs">
+                        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                        <span>
+                          Hora de entrega programada: <strong>{deliveryTimeValidation.formattedTime}</strong> (en aprox. {deliveryTimeValidation.diffMinutes} minutos)
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-950/40 border border-rose-800 text-rose-300 text-xs">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                        <span>{deliveryTimeValidation.message}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Order Notes */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="checkout-notas" className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Instrucciones o Referencias de Entrega
+                  </Label>
+                  <Input
+                    id="checkout-notas"
+                    value={notasPedido}
+                    onChange={(e) => setNotasPedido(e.target.value)}
+                    placeholder="Ej. Casa de rejas blancas, timbre 2, llamar al llegar"
+                    className="bg-slate-950 border-slate-800 text-white"
+                  />
+                </div>
+
+                {/* Summary Box */}
+                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between text-sm">
+                  <div>
+                    <span className="text-slate-400 block text-xs">Total del Pedido:</span>
+                    <span className="text-xs text-slate-500">{totalCartItemsCount} unidades de huevos</span>
+                  </div>
+                  <span className="text-2xl font-black text-amber-400">
+                    S/. {totalCartAmount.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Footer - Siempre visible, fijo abajo */}
+              <div 
+                className="flex-shrink-0 bg-slate-900 border-t border-slate-800 p-4 sm:px-6"
+                style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 1rem))" }}
+              >
+                <Button
+                  type="submit"
+                  disabled={submittingOrder || !deliveryTimeValidation.valid}
+                  className="w-full h-12 min-h-[44px] rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base shadow-lg shadow-emerald-900/30 gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submittingOrder ? (
+                    <span>Procesando y Notificando al Administrador...</span>
+                  ) : (
+                    <>
+                      <span>Confirmar Pedido Ahora</span>
+                      <CheckCircle2 className="w-5 h-5" />
+                    </>
+                  )}
+                </Button>
+              </div>
             </form>
           </div>
         </div>

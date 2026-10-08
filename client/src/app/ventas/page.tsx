@@ -572,8 +572,29 @@ export default function VentasPage() {
           title="Nueva Venta"
           description="Agrega uno o varios productos al pedido, luego confirma"
           maxWidth="2xl"
+          onSubmit={handleCreateVenta}
+          footer={
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { resetModal(); setModalVentaOpen(false); }}
+                className="w-full sm:w-auto min-h-[44px] h-11 text-sm font-semibold"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={cart.length === 0}
+                className="w-full sm:w-auto min-h-[44px] h-11 text-sm font-semibold shadow-md gap-2"
+              >
+                <DollarSign className="w-4 h-4" />
+                Confirmar Venta {cart.length > 0 && `(${cart.length} producto${cart.length > 1 ? "s" : ""})`}
+              </Button>
+            </>
+          }
         >
-          <form onSubmit={handleCreateVenta} className="space-y-5">
+          <div className="space-y-5">
 
             {/* --- Datos globales del pedido --- */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 pb-4 border-b border-slate-100">
@@ -735,18 +756,10 @@ export default function VentasPage() {
               <Input value={notasVenta} onChange={(e) => setNotasVenta(e.target.value)} placeholder="Detalles adicionales..." />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-              <Button type="button" variant="outline" onClick={() => { resetModal(); setModalVentaOpen(false); }}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={cart.length === 0} className="shadow-md gap-2">
-                <DollarSign className="w-4 h-4" />
-                Confirmar Venta {cart.length > 0 && `(${cart.length} producto${cart.length > 1 ? "s" : ""})`}
-              </Button>
-            </div>
-          </form>
+          </div>
         </DialogModal>
 
+        {/* Modal: Registrar Abono */}
         {/* Modal: Registrar Abono */}
         {abonoVenta && (
           <DialogModal
@@ -755,8 +768,27 @@ export default function VentasPage() {
             title="Registrar Cobro / Abono"
             description={`Cliente: ${abonoVenta.cliente || "Sin nombre"} • Deuda: ${formatCurrency(Number(abonoVenta.saldo_pendiente))}${abonoGrupo && abonoGrupo.length > 1 ? ` (${abonoGrupo.length} productos)` : ''}`}
             maxWidth="lg"
+            onSubmit={handleAbono}
+            footer={
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { setAbonoVenta(null); setAbonoGrupo(null); }}
+                  className="w-full sm:w-auto min-h-[44px] h-11 text-sm font-semibold"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  className="w-full sm:w-auto min-h-[44px] h-11 text-sm font-semibold"
+                >
+                  Registrar Cobro
+                </Button>
+              </>
+            }
           >
-            <form onSubmit={handleAbono} className="space-y-4">
+            <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-slate-600">Monto a Abonar (S/)</Label>
                 <Input type="number" step="0.01" value={abonoMonto} onChange={(e) => setAbonoMonto(e.target.value)} required min="0.01" max={Number(abonoVenta.saldo_pendiente)} autoFocus />
@@ -769,11 +801,7 @@ export default function VentasPage() {
                 <Label className="text-xs font-bold uppercase text-slate-600">Método (Yape, Plin, Efectivo...)</Label>
                 <Input value={abonoNotas} onChange={(e) => setAbonoNotas(e.target.value)} placeholder="Ej. Transferencia BCP" />
               </div>
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-                <Button type="button" variant="outline" onClick={() => setAbonoVenta(null)}>Cancelar</Button>
-                <Button type="submit">Registrar Cobro</Button>
-              </div>
-            </form>
+            </div>
           </DialogModal>
         )}
 
@@ -785,13 +813,32 @@ export default function VentasPage() {
             title={`Configuración: ${calidades.find((c) => c.id === editingCalidadId)?.nombre}`}
             description="Ajuste el precio de venta y tiempo de conservación"
             maxWidth="lg"
+            onSubmit={handleSaveEditCalidad}
+            footer={
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditCalidadOpen(false)}
+                  className="w-full sm:w-auto min-h-[44px] h-11 text-sm font-semibold"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  className="w-full sm:w-auto min-h-[44px] h-11 text-sm font-semibold"
+                >
+                  Guardar Cambios
+                </Button>
+              </>
+            }
           >
-            <form onSubmit={handleSaveEditCalidad} className="space-y-4">
+            <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-slate-600">Precio Venta por Jaba (S/)</Label>
                 <Input type="number" step="0.01" value={editPrecio} onChange={(e) => setEditPrecio(e.target.value)} required />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase text-slate-600">Días Conservación Mín.</Label>
                   <Input type="number" value={editConsMin} onChange={(e) => setEditConsMin(e.target.value)} placeholder="Ej. 15" />
@@ -801,11 +848,7 @@ export default function VentasPage() {
                   <Input type="number" value={editConsMax} onChange={(e) => setEditConsMax(e.target.value)} placeholder="Ej. 21" />
                 </div>
               </div>
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-                <Button type="button" variant="outline" onClick={() => setEditCalidadOpen(false)}>Cancelar</Button>
-                <Button type="submit">Guardar Cambios</Button>
-              </div>
-            </form>
+            </div>
           </DialogModal>
         )}
       </div>
