@@ -47,6 +47,41 @@ interface CatalogoItem {
   };
 }
 
+const DEFAULT_CATALOGO: CatalogoItem[] = [
+  {
+    id: 1,
+    nombre: "Huevo de Primera Calidad",
+    descripcion: "Huevos seleccionados de primera calidad, máxima frescura y peso óptimo. 360 huevos por jaba (12 celdas de 30 u.) directo de granja.",
+    imagen: "/images/huevosPrimera.jpg",
+    tag: "Calidad Premium",
+    badgeColor: "emerald",
+    stock_jabas: 50,
+    stock_paquetes: 100,
+    stock_celdas: 600,
+    precios: {
+      jaba: 120, // Margen de ganancia: S/ 8 - 10 por jaba sobre costo base de S/ 110
+      paquete: 60,
+      celda: 10,
+    },
+  },
+  {
+    id: 2,
+    nombre: "Huevo Manchado (Cuarta Calidad)",
+    descripcion: "Huevos económicos seleccionados para repostería, pastelería e industria culinaria de alto volumen.",
+    imagen: "/images/huevosManchados.jpg",
+    tag: "Ahorro & Repostería",
+    badgeColor: "amber",
+    stock_jabas: 25,
+    stock_paquetes: 50,
+    stock_celdas: 300,
+    precios: {
+      jaba: 70,
+      paquete: 35,
+      celda: 5.83,
+    },
+  },
+];
+
 interface CartItem {
   calidad_id: number;
   calidad_nombre: string;
@@ -96,13 +131,28 @@ export default function TiendaPage() {
           if (userRes.user.telefono) setTelefonoContacto(userRes.user.telefono);
         }
 
-        const catalogoRes = await api.getCatalogo();
-        setCatalogo(catalogoRes);
+        const catalogoRes = await api.getCatalogo().catch(() => null);
+        const rawList = Array.isArray(catalogoRes) && catalogoRes.length > 0 ? catalogoRes : DEFAULT_CATALOGO;
+        const normalizedList: CatalogoItem[] = rawList.map((item: any) => {
+          const isPrimera = (item.calidad_nombre || item.nombre || "").toLowerCase().includes("primera");
+          const isCuarta = (item.calidad_nombre || item.nombre || "").toLowerCase().includes("cuarta") || 
+                           (item.calidad_nombre || item.nombre || "").toLowerCase().includes("manchado");
+          return {
+            ...item,
+            imagen: isPrimera 
+              ? "/images/huevosPrimera.jpg" 
+              : isCuarta 
+              ? "/images/huevosManchados.jpg" 
+              : (item.imagen || "/images/huevosPrimera.jpg"),
+          };
+        });
+
+        setCatalogo(normalizedList);
 
         // Init default units
         const initialUnits: { [id: number]: "celdas" | "paquetes" | "jabas" } = {};
         const initialQty: { [id: number]: number } = {};
-        catalogoRes.forEach((item: CatalogoItem) => {
+        normalizedList.forEach((item: CatalogoItem) => {
           initialUnits[item.id] = "jabas";
           initialQty[item.id] = 1;
         });
@@ -503,9 +553,16 @@ export default function TiendaPage() {
                     {/* Title & Price Header over Image */}
                     <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
                       <div>
-                        <h3 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow-md">
-                          {product.nombre}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-xl sm:text-2xl font-extrabold text-white drop-shadow-md">
+                            {product.nombre}
+                          </h3>
+                          {product.nombre.toLowerCase().includes("primera") && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-400 text-slate-950 shadow-md">
+                              360 huevos / jaba
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-slate-300 drop-shadow-sm mt-0.5">
                           {product.descripcion}
                         </p>
@@ -552,6 +609,18 @@ export default function TiendaPage() {
                             </button>
                           );
                         })}
+                      </div>
+
+                      {/* Presentation & Pricing details */}
+                      <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800/80 text-[11px] text-slate-400">
+                        <span>
+                          {currentUnit === "jabas" && "📦 Presentación completa: 360 unidades seleccionadas (12 celdas)"}
+                          {currentUnit === "paquetes" && "📦 Medio lote: 180 unidades (6 celdas)"}
+                          {currentUnit === "celdas" && "📦 Bandeja individual: 30 unidades"}
+                        </span>
+                        <span className="text-emerald-400 font-bold shrink-0 ml-2">
+                          ~S/ {(product.precios.jaba / 360).toFixed(2)} / huevo
+                        </span>
                       </div>
                     </div>
 

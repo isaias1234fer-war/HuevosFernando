@@ -27,6 +27,7 @@ import {
   Calendar,
   X,
   PackagePlus,
+  Egg,
 } from "lucide-react";
 
 // ----- Constants -----
@@ -415,6 +416,45 @@ export default function VentasPage() {
             <ShoppingCart className="w-4 h-4" />
             <span>Nueva Venta</span>
           </Button>
+        </div>
+
+        {/* Calidades Precios & Margen Banner */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {calidades.map((cal) => {
+            const isPrimera = cal.nombre.toLowerCase().includes("primera");
+            return (
+              <div
+                key={cal.id}
+                className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                      isPrimera ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    <Egg className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">
+                      {cal.nombre}
+                    </span>
+                    <span className="text-[11px] text-slate-500 block">
+                      S/ {Number(cal.precio_venta_jaba || 0).toFixed(2)} por jaba (360 u.) • Margen: S/ 8-10
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleOpenEditCalidad(cal.id)}
+                  className="h-8 text-xs font-semibold"
+                >
+                  Configurar Precio
+                </Button>
+              </div>
+            );
+          })}
         </div>
 
         {/* Filtros */}
@@ -837,6 +877,10 @@ export default function VentasPage() {
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-slate-600">Precio Venta por Jaba (S/)</Label>
                 <Input type="number" step="0.01" value={editPrecio} onChange={(e) => setEditPrecio(e.target.value)} required />
+                <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200/80 rounded-lg p-2 font-medium">
+                  💡 <strong>Margen sugerido:</strong> Ganancia de <strong>S/ 8.00 a S/ 10.00</strong> por jaba (360 huevos).
+                  Ejemplo: Costo base ~S/ 110 &rarr; Precio sugerido S/ 118 a S/ 120 por jaba.
+                </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">

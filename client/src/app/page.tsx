@@ -124,6 +124,26 @@ export default function LoginPage() {
             Ordene por celdas, paquetes o jabas con stock verificado en tiempo real y programación de entrega garantizada.
           </p>
 
+          {/* Visual product preview for clients */}
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-slate-900/80 p-3 shadow-xl backdrop-blur-md flex items-center gap-4">
+            <img
+              src="/images/huevosPrimera.jpg"
+              alt="Huevos de Primera Calidad"
+              className="w-20 h-20 rounded-xl object-cover border border-emerald-500/40 shadow-md shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <span className="inline-block text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                Primera Calidad Garantizada
+              </span>
+              <p className="text-white font-extrabold text-sm truncate mt-1">
+                Huevos Frescos • 360 unidades por Jaba
+              </p>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Venta por celdas (30 u.), paquetes (180 u.) o jaba completa
+              </p>
+            </div>
+          </div>
+
           {/* Value Badges */}
           <div className="grid grid-cols-2 gap-3 pt-4">
             <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm">
